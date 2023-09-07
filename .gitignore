@@ -1,0 +1,6 @@
+build
+temp
+tmp
+
+.vscode
+!.vscode/c_cpp_properties.json
