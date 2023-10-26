@@ -16,7 +16,7 @@ You can download a pre-built binary from the releases page or build from source 
 Clone the Zenith repository to your local machine
 
 ```bash
-git clone https://github.com/blankstorm/zenith.git
+git clone https://github.com/blankstorm/zenithml.git
 ```
 
 Navigate to the Zenith project directory
