@@ -15,8 +15,8 @@ enum class FileType
 
 struct FileHeader
 {
-	static constexpr char Magic[8] = "DARWIN\x7f";
-	const char magic[8];
+	static constexpr char Magic[6] = "ZENML";
+	const char magic[6];
 	unsigned char type;
 	unsigned short int version;
 };

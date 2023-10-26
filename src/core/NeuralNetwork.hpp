@@ -3,8 +3,6 @@
 
 #include <vector>
 #include <functional>
-#include <nlohmann/json.hpp>
-using json = nlohmann::json;
 
 typedef std::function<float(float)> ActivationFunction;
 

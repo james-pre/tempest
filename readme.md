@@ -1,6 +1,6 @@
-# Darwin
+# Zenith
 
-Darwin is a simple C++ evolution simulator that allows you to train loose neural networks.
+Zenith is a simple C++ evolution simulator that allows you to train loose neural networks.
 
 ## Getting Started
 
@@ -13,16 +13,16 @@ You can download a pre-built binary from the releases page or build from source 
 
 ### Building from source
 
-Clone the Darwin repository to your local machine
+Clone the Zenith repository to your local machine
 
 ```bash
-git clone https://github.com/blankstorm/darwin.git
+git clone https://github.com/blankstorm/zenith.git
 ```
 
-Navigate to the Darwin project directory
+Navigate to the Zenith project directory
 
 ```bash
-cd darwin
+cd zenith
 ```
 
 Run the build script
