@@ -1,6 +1,6 @@
-# Zenith
+# Blankstorm Machine Learning
 
-Zenith is a simple C++ evolution simulator that allows you to train loose neural networks.
+A simple C++ evolution simulator that allows you to train loose neural networks.
 
 ## Getting Started
 
@@ -13,16 +13,16 @@ You can download a pre-built binary from the releases page or build from source 
 
 ### Building from source
 
-Clone the Zenith repository to your local machine
+Clone the repository to your local machine
 
 ```bash
-git clone https://github.com/blankstorm/zenithml.git
+git clone https://github.com/blankstorm/ml.git
 ```
 
-Navigate to the Zenith project directory
+Navigate to the project directory
 
 ```bash
-cd zenith
+cd ml
 ```
 
 Run the build script
@@ -33,4 +33,4 @@ Run the build script
 
 ## License
 
-This project is licensed under the Non-commerical MIT License. See the [license](license) file for details.
+This project is licensed under a Non-commerical MIT License. See the [license](license) file for details.
