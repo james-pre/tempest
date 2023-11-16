@@ -14,7 +14,7 @@ NeuronConnection::Serialized NeuronConnection::serialize()
 	};
 }
 
-NeuronConnection NeuronConnection::deserialize(NeuronConnection::Serialized &data)
+NeuronConnection NeuronConnection::Deserialize(NeuronConnection::Serialized &data)
 {
 	return NeuronConnection
 	{
@@ -25,27 +25,6 @@ NeuronConnection NeuronConnection::deserialize(NeuronConnection::Serialized &dat
 		data.reliability,
 	};
 }
-
-/*json NeuronConnection::to_json()
-{
-	return json{
-		{"neuron", neuron->id},
-		{"strength", strength},
-		{"plasticityRate", plasticityRate},
-		{"plasticityThreshold", plasticityThreshold},
-		{"reliability", reliability},
-	};
-}
-
-NeuronConnection NeuronConnection::from_json(json &data)
-{
-	NeuronConnection conn;
-	data["strength"].get_to(conn.strength);
-	data["plasticityRate"].get_to(conn.plasticityRate);
-	data["plasticityThreshold"].get_to(conn.plasticityThreshold);
-	data["reliability"].get_to(conn.reliability);
-	return conn;
-}*/
 
 Neuron::Neuron(NeuronType neuronType, NeuralNetwork *network, unsigned long int id) : _type(neuronType), _network(network)
 {
@@ -76,38 +55,6 @@ void Neuron::update()
 		output.neuron->update();
 	}
 }
-
-/*json Neuron::to_json()
-{
-	json data = {
-		{"id", id},
-		{"type", type}};
-
-	if (type != NeuronType::OUTPUT)
-	{
-		std::vector<json> outputsJson;
-
-		for (NeuronConnection &output : _outputs)
-		{
-			outputsJson.push_back(output.to_json());
-		}
-		data["outputs"] = outputsJson;
-	}
-
-	return data;
-}
-
-Neuron Neuron::from_json(json &data, NeuralNetwork *network)
-{
-	Neuron *neuron = new Neuron(data["type"].get<NeuronType>(), network, data["id"].get<unsigned long int>());
-	data.at("value").get_to(neuron->value);
-	for (json &output : data["outputs"].get<std::vector<json>>())
-	{
-		NeuronConnection conn = NeuronConnection::from_json(output);
-		neuron->addConnection(conn);
-	}
-	return *neuron;
-}*/
 
 NeuralNetwork::NeuralNetwork(ActivationFunction activationFunction) : activationFunction(activationFunction) {}
 
@@ -169,29 +116,3 @@ std::vector<float> NeuralNetwork::processInput(std::vector<float> inputValues)
 
 	return outputValues;
 }
-
-/*json NeuralNetwork::to_json()
-{
-	std::vector<json> outputsJson;
-
-	for (Neuron *const &neuron : neurons)
-	{
-		outputsJson.push_back(neuron->to_json());
-	}
-
-	return json{
-		{"neurons", outputsJson}};
-}
-
-NeuralNetwork NeuralNetwork::from_json(json &j)
-{
-	NeuralNetwork network;
-	auto outputsJson = j["neurons"].get<std::vector<json>>();
-	for (json &n : outputsJson)
-	{
-		Neuron neuron = Neuron::from_json(n, &network);
-		network.neurons.push_back(&neuron);
-	}
-
-	return network;
-}*/

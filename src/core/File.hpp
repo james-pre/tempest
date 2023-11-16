@@ -2,6 +2,7 @@
 #define H_File
 
 #include <string>
+#include <cstdint>
 #include "NeuralNetwork.hpp"
 #include "Environment.hpp"
 
@@ -15,10 +16,10 @@ enum class FileType
 
 struct FileHeader
 {
-	static constexpr char Magic[6] = "ZENML";
-	const char magic[6];
-	unsigned char type;
-	unsigned short int version;
+	static constexpr char Magic[4] = { 'B', 'S', 'M', 'L' };
+	const char magic[4];
+	uint8_t type;
+	uint16_t version;
 };
 
 struct File

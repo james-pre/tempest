@@ -37,7 +37,7 @@ struct NeuronConnection
 		float reliability;
 	};
 	Serialized serialize();
-	static NeuronConnection deserialize(Serialized &data);
+	static NeuronConnection Deserialize(Serialized &data);
 };
 
 class NeuralNetwork;
@@ -68,7 +68,7 @@ public:
 	};
 
 	Serialized serialize();
-	static NeuronConnection deserialize(Serialized &data);
+	static Neuron Deserialize(Serialized &data);
 };
 
 class NeuralNetwork
@@ -88,7 +88,7 @@ public:
 	};
 
 	Serialized serialize();
-	static NeuronConnection deserialize(Serialized &data);
+	static NeuralNetwork Deserialize(Serialized &data);
 };
 
 #endif

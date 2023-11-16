@@ -2,25 +2,24 @@
 #include <string>
 #include <fstream>
 #include <boost/program_options.hpp>
-#include "core/metadata.hpp"
-#include "core/NeuralNetwork.hpp"
+#include "../core/metadata.hpp"
+#include "../core/NeuralNetwork.hpp"
 
-namespace po = boost::program_options;
+namespace options = boost::program_options;
 
 int main(int argc, char **argv)
 {
 	// Command-line options
-	po::options_description desc("Options");
+	options::options_description desc("Options");
 	desc.add_options()
 		("help,h", "Display help message")
 		("version,v", "Display version")
-		("output,o", po::value<std::string>()->value_name("<path>"), "The file to output to. Defaults to the same as the input.")
-		("format,f", po::value<std::string>()->value_name("<format>"), "Output format: json, bin (defaults to input format)");
-	po::positional_options_description pos_desc;
+		("output,o", options::value<std::string>()->value_name("<path>"), "The file to output to. Defaults to the same as the input.");
+	options::positional_options_description pos_desc;
 	pos_desc.add("file", 1);
-	po::variables_map vm;
-	po::store(po::command_line_parser(argc, argv).options(desc).positional(pos_desc).run(), vm);
-	po::notify(vm);
+	options::variables_map vm;
+	options::store(options::command_line_parser(argc, argv).options(desc).positional(pos_desc).run(), vm);
+	options::notify(vm);
 
 	if (vm.count("help"))
 	{
@@ -57,7 +56,6 @@ int main(int argc, char **argv)
 
 	if (vm.count("output"))
 	{
-		std::string format = vm.count("format") ? vm["format"].as<std::string>() : "json";
 		std::string outputPath = vm["output"].as<std::string>();
 		std::cout << "Writing output to " << outputPath << std::endl;
 		std::ofstream file(outputPath);
