@@ -5,23 +5,20 @@
 
 File readFile(std::string path)
 {
-	std::ifstream file(path);
-	if(!file.is_open())
+	std::ifstream input(path);
+	if(!input.is_open())
 	{
 		throw std::runtime_error("Failed to open file: " + path);
 	}
 
-	std::string content;
-    file.seekg(0, std::ios::end);
-    content.resize(file.tellg());
-    file.seekg(0, std::ios::beg);
-    file.read(&content[0], content.size());
-    file.close();
+	File file = {};
+	input.read((char*) &file, sizeof(file));
+    input.close();
 
-	if(content.size() >= 8 && content.substr(0, 8) == FileHeader::Magic)
+	if(file.header.magic != FileHeader::Magic)
 	{
-
+		throw std::runtime_error("Invalid file");
 	}
 
-	throw std::runtime_error("Failed to detect file format");
+	return file;
 }

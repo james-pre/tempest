@@ -20,12 +20,12 @@ struct FileHeader
 	const char magic[4];
 	uint8_t type;
 	uint16_t version;
-};
+} __attribute__((packed));
 
 struct File
 {
 	FileHeader header;
-};
+} __attribute__((packed));
 
 File readFile(std::string path);
 //FileMetadata readMetadata(std::string path);
