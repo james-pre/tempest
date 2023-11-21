@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 
 		if (!vm.count("file"))
 		{
-			throw "No input file specified.";
+			throw std::runtime_error("No input file specified.");
 		}
 
 		std::string path = vm["file"].as<std::string>();
@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 
 		File file = readFile(path);
 
-		std::cout << "Header: \nmagic:" << file.header.magic << "\ntype:" << std::to_string(file.header.type) << "\nversion:" << std::to_string(file.header.version) << std::endl;
+		std::cout << "Header: \nmagic: " << file.header.magic << "\ntype: " << std::to_string(file.header.type) << "\nversion: " << std::to_string(file.header.version) << std::endl;
 		return 0;
 	}
 	catch (std::exception &err)

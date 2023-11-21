@@ -18,7 +18,7 @@ File readFile(std::string path)
 	std::string magic = file.header.magic;
 	if(magic != FileHeader::Magic)
 	{
-		throw std::runtime_error("Invalid file (magic: " + magic + ")");
+		throw std::runtime_error("Invalid file (bad magic)");
 	}
 
 	return file;
