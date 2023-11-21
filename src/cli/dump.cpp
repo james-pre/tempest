@@ -17,6 +17,7 @@ int main(int argc, char **argv)
 		options::options_description desc("Options");
 		desc.add_options()
 			("help,h", "Display help message")
+			("debug,d", "Show verbose/debug messages")
 			("file", "Input file");
 		options::positional_options_description pos_desc;
 		pos_desc.add("file", 1);
@@ -37,9 +38,10 @@ int main(int argc, char **argv)
 		}
 
 		std::string path = vm["file"].as<std::string>();
+		std::cout << "Dump of " << path << ":\n";
+
 		File file = readFile(path);
 
-		std::cout << "Dump of " << path << ":\n";
 		std::cout << "Header: \nmagic:" << file.header.magic << "\ntype:" << std::to_string(file.header.type) << "\nversion:" << std::to_string(file.header.version) << std::endl;
 		return 0;
 	}

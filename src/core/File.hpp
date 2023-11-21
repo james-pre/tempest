@@ -16,8 +16,8 @@ enum class FileType
 
 struct FileHeader
 {
-	static constexpr char Magic[4] = { 'B', 'S', 'M', 'L' };
-	const char magic[4];
+	static constexpr char Magic[5] = "BSML";
+	const char magic[5];
 	uint8_t type;
 	uint16_t version;
 } __attribute__((packed));
@@ -28,8 +28,5 @@ struct File
 } __attribute__((packed));
 
 File readFile(std::string path);
-//FileMetadata readMetadata(std::string path);
-NeuralNetwork readNetwork(std::string path);
-Environment readEnvironment(std::string path);
 
 #endif

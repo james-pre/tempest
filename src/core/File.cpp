@@ -15,9 +15,10 @@ File readFile(std::string path)
 	input.read((char*) &file, sizeof(file));
     input.close();
 
-	if(file.header.magic != FileHeader::Magic)
+	std::string magic = file.header.magic;
+	if(magic != FileHeader::Magic)
 	{
-		throw std::runtime_error("Invalid file");
+		throw std::runtime_error("Invalid file (magic: " + magic + ")");
 	}
 
 	return file;

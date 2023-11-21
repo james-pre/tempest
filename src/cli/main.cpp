@@ -14,6 +14,7 @@ int main(int argc, char **argv)
 	desc.add_options()
 		("help,h", "Display help message")
 		("version,v", "Display version")
+		("debug,d", "Show verbose/debug messages")
 		("output,o", options::value<std::string>()->value_name("<path>"), "The file to output to. Defaults to the same as the input.");
 	options::positional_options_description pos_desc;
 	pos_desc.add("file", 1);
