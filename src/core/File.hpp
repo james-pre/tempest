@@ -9,10 +9,14 @@
 enum class FileType
 {
 	NONE,	 // no data
-	NETWORK, // just a network
+	NETWORK, // neural network(s)
 	PARTIAL, // partial environment (e.g. for sharding into multiple files)
 	FULL,	 // an entire environment
 };
+
+constexpr const int maxFileType = 4;
+
+constexpr std::array<const char*, maxFileType> fileTypes = { "None", "Network", "Partial", "Full" };
 
 struct FileHeader
 {
@@ -25,6 +29,10 @@ struct FileHeader
 struct File
 {
 	FileHeader header;
+	union _Data {
+		NeuralNetwork::Serialized* network;
+		
+	} data;
 } __attribute__((packed));
 
 File readFile(std::string path);

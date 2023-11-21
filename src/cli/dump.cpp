@@ -42,7 +42,9 @@ int main(int argc, char **argv)
 
 		File file = readFile(path);
 
-		std::cout << "Header: \nmagic: " << file.header.magic << "\ntype: " << std::to_string(file.header.type) << "\nversion: " << std::to_string(file.header.version) << std::endl;
+		std::cout << "Header: \n\tmagic: " << file.header.magic << "\n";
+		std::string type = (file.header.type < maxFileType) ? fileTypes.at(file.header.type) : "Unknown (" + std::to_string(file.header.type) + ")";
+		std::cout << "\ttype: " << type << "\n\tversion: " << std::to_string(file.header.version) << std::endl;
 		return 0;
 	}
 	catch (std::exception &err)
