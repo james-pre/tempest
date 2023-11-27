@@ -26,7 +26,7 @@ struct FileHeader
 	uint16_t version;
 } __attribute__((packed));
 
-struct File
+struct FileData
 {
 	FileHeader header;
 	union _Data {
@@ -35,6 +35,11 @@ struct File
 	} data;
 } __attribute__((packed));
 
-File readFile(std::string path);
+class File {
+public:
+	FileData data;
+	const FileHeader &header = data.header;
+	static File Read(std::string path);
+};
 
 #endif

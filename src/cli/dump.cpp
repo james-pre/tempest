@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 		std::string path = vm["file"].as<std::string>();
 		std::cout << "Dump of " << path << ":\n";
 
-		File file = readFile(path);
+		File file = File::Read(path);
 
 		std::cout << "Header: \n\tmagic: " << file.header.magic << "\n";
 		std::string type = (file.header.type < maxFileType) ? fileTypes.at(file.header.type) : "Unknown (" + std::to_string(file.header.type) + ")";

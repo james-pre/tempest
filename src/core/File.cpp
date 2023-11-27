@@ -3,7 +3,7 @@
 #include "utils.hpp"
 #include "File.hpp"
 
-File readFile(std::string path)
+File File::Read(std::string path)
 {
 	std::ifstream input(path);
 	if(!input.is_open())
