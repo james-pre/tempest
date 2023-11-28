@@ -44,7 +44,6 @@ private:
 public:
 	const FileData &data = contents.data;
 	const FileHeader &header = contents.header;
-	File();
 	File(FileContents contents);
 	static File Read(std::string path);
 };

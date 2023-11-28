@@ -1,7 +1,7 @@
 #ifndef H_metadata
 #define H_metadata
 
-const unsigned short int VERSION = 0;
-const char VERSION_NAME[] = "prototype";
+const unsigned short int version = 0;
+const char version_name[] = "prototype";
 
 #endif
