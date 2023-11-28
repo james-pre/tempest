@@ -16,7 +16,7 @@ enum class FileType
 
 constexpr const int maxFileType = 4;
 
-constexpr std::array<const char*, maxFileType> fileTypes = { "None", "Network", "Partial", "Full" };
+constexpr std::array<const char *, maxFileType> fileTypes = {"None", "Network", "Partial", "Full"};
 
 struct FileHeader
 {
@@ -26,19 +26,26 @@ struct FileHeader
 	uint16_t version;
 } __attribute__((packed));
 
-struct FileData
+union FileData
+{
+	NeuralNetwork::Serialized *network;
+};
+
+struct FileContents
 {
 	FileHeader header;
-	union _Data {
-		NeuralNetwork::Serialized* network;
-		
-	} data;
+	FileData data;
 } __attribute__((packed));
 
-class File {
+class File
+{
+private:
+	FileContents contents;
 public:
-	FileData data;
-	const FileHeader &header = data.header;
+	const FileData &data = contents.data;
+	const FileHeader &header = contents.header;
+	File();
+	File(FileContents contents);
 	static File Read(std::string path);
 };
 
