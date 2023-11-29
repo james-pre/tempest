@@ -14,17 +14,16 @@ int main(int argc, char **argv)
 	desc.add_options()
 		("help,h", "Display help message")
 		("version,v", "Display version")
-		("debug,d", "Show verbose/debug messages")
-		("output,o", options::value<std::string>()->value_name("<path>"), "The file to output to. Defaults to the same as the input.");
+		("debug,d", "Show verbose/debug messages");
 	options::positional_options_description pos_desc;
-	pos_desc.add("file", 1);
+	pos_desc.add("command", 1);
 	options::variables_map vm;
 	options::store(options::command_line_parser(argc, argv).options(desc).positional(pos_desc).run(), vm);
 	options::notify(vm);
 
 	if (vm.count("help"))
 	{
-		std::cout << "Usage: <file>" << std::endl << desc << std::endl;
+		std::cout << "Usage: \n" << desc << std::endl;
 		return 0;
 	}
 
@@ -34,9 +33,9 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	if(!vm.count("file"))
+	if(!vm.count("command"))
 	{
-		std::cerr << "No input file specified." << std::endl;
+		std::cerr << "No subcommand specified." << std::endl;
 		return 1;
 	}
 
