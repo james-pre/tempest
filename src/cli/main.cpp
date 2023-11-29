@@ -30,7 +30,7 @@ int main(int argc, char **argv)
 
 	if (vm.count("version"))
 	{
-		std::cout << VERSION_NAME << std::endl;
+		std::cout << version_name << std::endl;
 		return 0;
 	}
 
@@ -39,41 +39,6 @@ int main(int argc, char **argv)
 		std::cerr << "No input file specified." << std::endl;
 		return 1;
 	}
-
-	/*
-	// Provide input values
-	std::vector<float> inputValues = {2, 3};
-
-	// Activate the neural network with input values and the activation function
-	std::vector<float> outputValues = neuralNetwork->processInput(inputValues);
-
-	// Print output values
-	std::cout << "Output values:";
-	for (float outputValue : outputValues)
-	{
-		std::cout << " " << outputValue;
-	}
-	std::cout << std::endl;
-
-	if (vm.count("output"))
-	{
-		std::string outputPath = vm["output"].as<std::string>();
-		std::cout << "Writing output to " << outputPath << std::endl;
-		std::ofstream file(outputPath);
-
-		if(format == "json")
-		{
-			file << neuralNetwork->to_json() << std::endl;
-		}
-		else
-		{
-			std::cerr << "output format \"" << format << "\" not supported" << std::endl;
-		}
-		file.close();
-	}
-
-	// Clean up
-	delete neuralNetwork;*/
 
 	return 0;
 }
