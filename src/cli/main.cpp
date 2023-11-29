@@ -14,7 +14,8 @@ int main(int argc, char **argv)
 	desc.add_options()
 		("help,h", "Display help message")
 		("version,v", "Display version")
-		("debug,d", "Show verbose/debug messages");
+		("debug,d", "Show verbose/debug messages")
+		("command", "Subcommand");
 	options::positional_options_description pos_desc;
 	pos_desc.add("command", 1);
 	options::variables_map vm;
@@ -38,6 +39,8 @@ int main(int argc, char **argv)
 		std::cerr << "No subcommand specified." << std::endl;
 		return 1;
 	}
+
+	std::string subcommand = vm["command"].as<std::string>();
 
 	return 0;
 }
