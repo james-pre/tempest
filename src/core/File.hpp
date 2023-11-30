@@ -18,34 +18,32 @@ constexpr const int maxFileType = 4;
 
 constexpr std::array<const char *, maxFileType> fileTypes = {"None", "Network", "Partial", "Full"};
 
-struct FileHeader
-{
-	static constexpr char Magic[5] = "BSML";
-	const char magic[5];
-	uint8_t type;
-	uint16_t version;
-} __attribute__((packed));
-
-union FileData
-{
-	NeuralNetwork::Serialized *network;
-};
+typedef unsigned int FileVersion;
 
 struct FileContents
 {
-	FileHeader header;
-	FileData data;
+	char magic[5];
+	uint8_t type;
+	uint16_t version;
+	union Data
+	{
+		NeuralNetwork::Serialized *network;
+	} data;
 } __attribute__((packed));
 
 class File
 {
 private:
-	FileContents contents;
+	FileContents _contents;
 public:
-	const FileData &data = contents.data;
-	const FileHeader &header = contents.header;
+	const FileContents &contents = _contents;
+	const std::string &magic = contents.magic;
+	const FileType &type = static_cast<FileType>(contents.type);
+	const FileVersion &version = contents.version;
+	const FileContents::Data &data = contents.data;
 	File(FileContents contents);
 	static File Read(std::string path);
+	static constexpr char Magic[5] = "BSML";
 };
 
 #endif

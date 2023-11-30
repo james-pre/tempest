@@ -34,28 +34,39 @@ int main(int argc, char **argv)
 			throw std::runtime_error("No input file specified.");
 		}
 
-		std::string path = vm["input"].as<std::string>();
-		std::string output = vm["output"].as<std::string>();
-		std::string format = vm["format"].as<std::string>();
+		const std::string path = vm["input"].as<std::string>();
+		const std::string output = vm["output"].as<std::string>();
+		const std::string format = vm["format"].as<std::string>();
 		if (format != "text" && output.empty())
 		{
 			throw std::runtime_error("No output file specified.");
 		}
 
+		std::cout << "Dump of " << path << ":\n";
+
+		const File file = File::Read(path);
+
+		std::cout << "Header: \n\tmagic: " << file.magic << "\n";
+		const unsigned char _type = file.contents.type;
+		const std::string type = (_type < maxFileType) ? fileTypes.at(_type) : "Unknown (" + std::to_string(_type) + ")";
+		std::cout << "\ttype: " << type << "\n\tversion: " << std::to_string(file.version) << std::endl;
+
 		if (format == "gv" || format == "dot")
 		{
-			
 		}
 
 		if (format == "text")
 		{
-			std::cout << "Dump of " << path << ":\n";
-
-			File file = File::Read(path);
-
-			std::cout << "Header: \n\tmagic: " << file.header.magic << "\n";
-			std::string type = (file.header.type < maxFileType) ? fileTypes.at(file.header.type) : "Unknown (" + std::to_string(file.header.type) + ")";
-			std::cout << "\ttype: " << type << "\n\tversion: " << std::to_string(file.header.version) << std::endl;
+			switch(file.type) {
+				case FileType::NONE:
+					break;
+				case FileType::NETWORK:
+					break;
+				case FileType::PARTIAL:
+					break;
+				case FileType::FULL:
+					break;
+			}
 			return 0;
 		}
 

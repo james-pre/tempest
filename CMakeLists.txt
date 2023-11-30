@@ -11,10 +11,10 @@ file(GLOB LIB_SOURCES src/core/*.hpp src/core/*.cpp)
 add_library(bsml SHARED ${LIB_SOURCES})
 file(GLOB CLI_SOURCES src/cli/*.cpp)
 foreach(file ${CLI_SOURCES} )
-    # Cut off the file extension and directory path
-    get_filename_component(name ${file} NAME_WE)
-    add_executable(${name} ${file})
-    target_link_libraries(${name} bsml Boost::program_options)
+	# Cut off the file extension and directory path
+	get_filename_component(name ${file} NAME_WE)
+	add_executable(${name} ${file})
+	target_link_libraries(${name} bsml Boost::program_options)
 endforeach(file ${CLI_SOURCES})
 
 if(CMAKE_COMPILER_IS_GNUCXX)
