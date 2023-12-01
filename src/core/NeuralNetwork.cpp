@@ -1,12 +1,12 @@
+#include <ctime>
 #include <cstdlib>
 #include <stdexcept>
 #include "NeuralNetwork.hpp"
 
 NeuronConnection::Serialized NeuronConnection::serialize()
 {
-	return NeuronConnection::Serialized
-	{
-		neuron->id,
+	return NeuronConnection::Serialized{
+		neuron.id,
 		strength,
 		plasticityRate,
 		plasticityThreshold,
@@ -14,11 +14,10 @@ NeuronConnection::Serialized NeuronConnection::serialize()
 	};
 }
 
-NeuronConnection NeuronConnection::Deserialize(NeuronConnection::Serialized &data)
+NeuronConnection NeuronConnection::Deserialize(NeuronConnection::Serialized &data, Neuron &neuron)
 {
-	return NeuronConnection
-	{
-		nullptr,
+	return NeuronConnection{
+		neuron,
 		data.strength,
 		data.plasticityRate,
 		data.plasticityThreshold,
@@ -26,16 +25,51 @@ NeuronConnection NeuronConnection::Deserialize(NeuronConnection::Serialized &dat
 	};
 }
 
-Neuron::Neuron(NeuronType neuronType, NeuralNetwork *network, unsigned long int id) : _type(neuronType), _network(network)
+// Todo: This should be changed to properly account for the different attributes
+void NeuronConnection::mutate()
+{
+	std::srand(static_cast<unsigned>(std::time(0)));
+	float mutationStrength = static_cast<float>(std::rand()) / 2;
+	float newValue = static_cast<float>(std::rand()) - .5;
+	switch(std::rand() % 5)
+	{
+		case 0:
+			return;
+		case 1:
+			strength += newValue * mutationStrength;
+			return;
+		case 2:
+			plasticityRate += newValue * mutationStrength;
+			return;
+		case 3:
+			plasticityThreshold += newValue * mutationStrength;
+			return;
+		case 4:
+			reliability += newValue * mutationStrength;
+			return;
+	}
+}
+
+Neuron::Neuron(NeuronType neuronType, NeuralNetwork &network, uint64_t id) : _type(neuronType), network(network)
 {
 	_id = id ? id : reinterpret_cast<std::uintptr_t>(&*this);
 }
 
-NeuronConnection Neuron::connectTo(Neuron *neuron)
+NeuronConnection Neuron::connect(Neuron &neuron)
 {
 	NeuronConnection connection = {neuron};
 	addConnection(connection);
 	return connection;
+}
+
+void Neuron::unconnect(Neuron &neuron)
+{
+	NeuronConnection connection = std::find_if(_outputs.begin(), _outputs.end(), []() {
+
+	});
+	if(connection) {
+		removeConnection(connection);
+	}
 }
 
 void Neuron::addConnection(NeuronConnection connection)
@@ -43,36 +77,66 @@ void Neuron::addConnection(NeuronConnection connection)
 	_outputs.push_back(connection);
 }
 
+void Neuron::removeConnection(NeuronConnection connection)
+{
+	std::remove(_outputs.begin(), _outputs.end(), connection);
+}
+
 void Neuron::update()
 {
-	float activation = network->activationFunction(value);
+	float activation = network.activationFunction(value);
 
 	for (NeuronConnection &output : _outputs)
 	{
 		float plasticityEffect = (std::abs(output.strength) > output.plasticityThreshold) ? output.plasticityRate : 1;
 		float outputEffect = activation * output.strength * plasticityEffect * output.reliability;
-		output.neuron->value += outputEffect;
-		output.neuron->update();
+		output.neuron.value += outputEffect;
+		output.neuron.update();
 	}
+}
+
+void Neuron::mutate()
+{
+	std::srand(static_cast<unsigned>(std::time(0)));
+	int neuronCount = network.neurons.size();
+	int index = std::rand() % neuronCount;
+	Neuron &neuron = network.neurons.at(index);
+	if(static_cast<float>(std::rand()) > 0.5) {
+		connect(neuron);
+	} else {
+		unconnect(neuron);
+	}
+}
+
+Neuron::Serialized Neuron::serialize()
+{
+	NeuronConnection::Serialized serialziedOutputs[outputs.size()];
+	std::copy(outputs.begin(), outputs.end(), serialziedOutputs);
+	return Neuron::Serialized{
+		id,
+		static_cast<uint16_t>(type),
+		outputs.size(),
+		serialziedOutputs,
+	};
+}
+
+Neuron Neuron::Deserialize(Neuron::Serialized &data, NeuralNetwork &network)
+{
+	return Neuron(static_cast<NeuronType>(data.type), network, data.id);
 }
 
 NeuralNetwork::NeuralNetwork(ActivationFunction activationFunction) : activationFunction(activationFunction) {}
 
 NeuralNetwork::~NeuralNetwork()
 {
-	// Clean up allocated neurons
-	for (Neuron *neuron : neurons)
-	{
-		delete neuron;
-	}
 }
 
-std::vector<Neuron *> NeuralNetwork::neuronsOfType(NeuronType type)
+std::vector<Neuron> NeuralNetwork::neuronsOfType(NeuronType type)
 {
-	std::vector<Neuron *> ofType;
-	for (Neuron *neuron : neurons)
+	std::vector<Neuron> ofType;
+	for (Neuron &neuron : neurons)
 	{
-		if (neuron->type == type)
+		if (neuron.type == type)
 		{
 			ofType.push_back(neuron);
 		}
@@ -84,15 +148,19 @@ std::vector<Neuron *> NeuralNetwork::neuronsOfType(NeuronType type)
 void NeuralNetwork::update()
 {
 	// Start the update process from input neurons
-	for (Neuron *inputNeuron : neuronsOfType(NeuronType::INPUT))
+	for (Neuron &inputNeuron : neuronsOfType(NeuronType::INPUT))
 	{
-		inputNeuron->update();
+		inputNeuron.update();
 	}
+}
+
+void NeuralNetwork::mutate()
+{
 }
 
 std::vector<float> NeuralNetwork::processInput(std::vector<float> inputValues)
 {
-	std::vector<Neuron *> inputs = neuronsOfType(NeuronType::INPUT);
+	std::vector<Neuron> inputs = neuronsOfType(NeuronType::INPUT);
 	if (inputValues.size() != inputs.size())
 	{
 		throw new std::invalid_argument("Input size does not match the number of input neurons.");
@@ -101,7 +169,7 @@ std::vector<float> NeuralNetwork::processInput(std::vector<float> inputValues)
 	// Set input values for input neurons
 	for (size_t i = 0; i < inputValues.size(); ++i)
 	{
-		inputs[i]->value = inputValues[i];
+		inputs[i].value = inputValues[i];
 	}
 
 	// Update the network
@@ -109,9 +177,9 @@ std::vector<float> NeuralNetwork::processInput(std::vector<float> inputValues)
 
 	// Collect output values from output neurons
 	std::vector<float> outputValues;
-	for (Neuron *output : neuronsOfType(NeuronType::OUTPUT))
+	for (Neuron &output : neuronsOfType(NeuronType::OUTPUT))
 	{
-		outputValues.push_back(output->value);
+		outputValues.push_back(output.value);
 	}
 
 	return outputValues;

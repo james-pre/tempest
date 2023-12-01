@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <functional>
+#include <cstdint>
 
 typedef std::function<float(float)> ActivationFunction;
 
@@ -21,23 +22,26 @@ enum class NeuronType
 
 class Neuron;
 
-struct NeuronConnection
+class NeuronConnection
 {
-	Neuron *neuron;				   // ref to connected neuron
+public:
+	Neuron &neuron;				   // ref to connected neuron
 	float strength = 1;			   // strength of the connection (>1: excitatory, <1: inhibitory)
 	float plasticityRate = 0;	   // how fast the strength changes
 	float plasticityThreshold = 1; // the max strength
 	float reliability = 1;		   // how reliable the passed value is
 
-	struct Serialized {
-		unsigned long int neuron;
+	struct Serialized
+	{
+		uint64_t neuron;
 		float strength;
 		float plasticityRate;
 		float plasticityThreshold;
 		float reliability;
-	};
+	} __attribute__((packed));
 	Serialized serialize();
-	static NeuronConnection Deserialize(Serialized &data);
+	void mutate();
+	static NeuronConnection Deserialize(Serialized &data, Neuron &neuron);
 };
 
 class NeuralNetwork;
@@ -46,29 +50,33 @@ class Neuron
 {
 private:
 	NeuronType _type;
-	NeuralNetwork * _network;
 	std::vector<NeuronConnection> _outputs;
-	unsigned long int _id;
+	uint64_t _id;
+
 public:
-	Neuron(NeuronType neuronType, NeuralNetwork *network, unsigned long int id = 0);
+	Neuron(NeuronType neuronType, NeuralNetwork &network, uint64_t id = 0);
 	const NeuronType &type = _type;
-	const NeuralNetwork * network = _network;
+	NeuralNetwork &network;
 	const std::vector<NeuronConnection> &outputs = _outputs;
-	const unsigned long int &id = _id;
-	NeuronConnection connectTo(Neuron *neuron);
+	const uint64_t &id = _id;
+	NeuronConnection connect(Neuron &neuron);
+	void unconnect(Neuron &neuron);
 	void addConnection(NeuronConnection connection);
+	void removeConnection(NeuronConnection connection);
 	float value = 0;
 	void update();
+	void mutate();
 
-	struct Serialized {
-		unsigned long int id;
-		unsigned short int type;
-		unsigned int numConnections;
-		NeuronConnection::Serialized connections[];
-	};
+	struct Serialized
+	{
+		uint64_t id;
+		uint16_t type;
+		uint64_t num_outputs;
+		NeuronConnection::Serialized *outputs;
+	} __attribute__((packed));
 
 	Serialized serialize();
-	static Neuron Deserialize(Serialized &data);
+	static Neuron Deserialize(Serialized &data, NeuralNetwork &network);
 };
 
 class NeuralNetwork
@@ -78,14 +86,18 @@ public:
 	NeuralNetwork(ActivationFunction activationFunction = reluDefaultActivation);
 	~NeuralNetwork();
 	ActivationFunction activationFunction;
-	std::vector<Neuron *> neurons;
-	std::vector<Neuron *> neuronsOfType(NeuronType type);
+	std::vector<Neuron> neurons;
+	std::vector<Neuron> neuronsOfType(NeuronType type);
 	void update();
+	void mutate();
 	std::vector<float> processInput(std::vector<float> inputValues);
 
-	struct Serialized {
-
-	};
+	struct Serialized
+	{
+		uint64_t id;
+		uint64_t num_neurons;
+		Neuron::Serialized neurons[];
+	} __attribute__((packed));
 
 	Serialized serialize();
 	static NeuralNetwork Deserialize(Serialized &data);

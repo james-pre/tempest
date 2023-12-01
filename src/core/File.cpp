@@ -3,7 +3,12 @@
 #include "utils.hpp"
 #include "File.hpp"
 
-File::File(FileContents contents) : _contents(contents), contents(_contents), magic(contents.magic), type(static_cast<FileType>(contents.type)), version(_contents.version), data(_contents.data)
+File::File(FileContents contents) : _contents(contents),
+									contents(_contents),
+									magic(contents.magic),
+									type(static_cast<FileType>(contents.type)),
+									version(_contents.version),
+									data(_contents.data)
 {
 }
 
@@ -15,7 +20,7 @@ File File::Read(std::string path)
 		throw std::runtime_error("Failed to open file: " + path);
 	}
 
-	FileContents contents = {};
+	const FileContents contents = {};
 	input.read((char *)&contents, sizeof(contents));
 	input.close();
 
