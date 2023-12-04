@@ -6,7 +6,7 @@
 NeuronConnection::Serialized NeuronConnection::serialize()
 {
 	return NeuronConnection::Serialized{
-		neuron.id,
+		neuron->id,
 		strength,
 		plasticityRate,
 		plasticityThreshold,
@@ -17,7 +17,7 @@ NeuronConnection::Serialized NeuronConnection::serialize()
 NeuronConnection NeuronConnection::Deserialize(NeuronConnection::Serialized &data, Neuron &neuron)
 {
 	return NeuronConnection{
-		neuron,
+		&neuron,
 		data.strength,
 		data.plasticityRate,
 		data.plasticityThreshold,
@@ -57,19 +57,22 @@ Neuron::Neuron(NeuronType neuronType, NeuralNetwork &network, uint64_t id) : _ty
 
 NeuronConnection Neuron::connect(Neuron &neuron)
 {
-	NeuronConnection connection = {neuron};
+	NeuronConnection connection = {&neuron};
 	addConnection(connection);
 	return connection;
 }
 
 void Neuron::unconnect(Neuron &neuron)
 {
-	NeuronConnection connection = std::find_if(_outputs.begin(), _outputs.end(), []() {
-
+	const auto it = std::find_if(_outputs.begin(), _outputs.end(), [&](NeuronConnection &conn) {
+		return conn.neuron->id == neuron.id;
 	});
-	if(connection) {
-		removeConnection(connection);
+
+	if (it == _outputs.end()) {
+		throw std::runtime_error("Neuron is not connected");
 	}
+
+	removeConnection(static_cast<const NeuronConnection&>(*it));
 }
 
 void Neuron::addConnection(NeuronConnection connection)
@@ -90,8 +93,8 @@ void Neuron::update()
 	{
 		float plasticityEffect = (std::abs(output.strength) > output.plasticityThreshold) ? output.plasticityRate : 1;
 		float outputEffect = activation * output.strength * plasticityEffect * output.reliability;
-		output.neuron.value += outputEffect;
-		output.neuron.update();
+		output.neuron->value += outputEffect;
+		output.neuron->update();
 	}
 }
 
