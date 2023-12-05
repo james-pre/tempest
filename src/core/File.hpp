@@ -28,7 +28,7 @@ struct FileContents
 	union Data
 	{
 		NeuralNetwork::Serialized *network;
-	} data;
+	} __attribute__((packed)) data;
 } __attribute__((packed));
 
 class File
@@ -36,11 +36,11 @@ class File
 private:
 	FileContents _contents;
 public:
-	const FileContents &contents = _contents;
-	const std::string &magic = contents.magic;
-	const FileType &type = static_cast<FileType>(contents.type);
-	const FileVersion &version = contents.version;
-	const FileContents::Data &data = contents.data;
+	FileContents &contents = _contents;
+	const std::string &magic = _contents.magic;
+	const FileType &type = static_cast<FileType>(_contents.type);
+	const FileVersion &version = _contents.version;
+	const FileContents::Data &data = _contents.data;
 	File(FileContents contents);
 	static File Read(std::string path);
 	static constexpr char Magic[5] = "BSML";

@@ -42,6 +42,9 @@ public:
 	Serialized serialize();
 	void mutate();
 	static NeuronConnection Deserialize(Serialized &data, Neuron &neuron);
+	inline bool operator==(const NeuronConnection& other) const {
+		return this == &other;
+	}
 };
 
 class NeuralNetwork;
@@ -62,7 +65,7 @@ public:
 	NeuronConnection connect(Neuron &neuron);
 	void unconnect(Neuron &neuron);
 	void addConnection(NeuronConnection connection);
-	void removeConnection(NeuronConnection connection);
+	void removeConnection(const NeuronConnection &connection);
 	float value = 0;
 	void update();
 	void mutate();

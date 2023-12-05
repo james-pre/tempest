@@ -4,11 +4,11 @@
 #include "File.hpp"
 
 File::File(FileContents contents) : _contents(contents),
-									contents(_contents),
-									magic(contents.magic),
+									contents(contents),
+									magic(std::string(contents.magic)),
 									type(static_cast<FileType>(contents.type)),
-									version(_contents.version),
-									data(_contents.data)
+									version(contents.version),
+									data(contents.data)
 {
 }
 

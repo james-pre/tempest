@@ -31,22 +31,22 @@ void NeuronConnection::mutate()
 	std::srand(static_cast<unsigned>(std::time(0)));
 	float mutationStrength = static_cast<float>(std::rand()) / 2;
 	float newValue = static_cast<float>(std::rand()) - .5;
-	switch(std::rand() % 5)
+	switch (std::rand() % 5)
 	{
-		case 0:
-			return;
-		case 1:
-			strength += newValue * mutationStrength;
-			return;
-		case 2:
-			plasticityRate += newValue * mutationStrength;
-			return;
-		case 3:
-			plasticityThreshold += newValue * mutationStrength;
-			return;
-		case 4:
-			reliability += newValue * mutationStrength;
-			return;
+	case 0:
+		return;
+	case 1:
+		strength += newValue * mutationStrength;
+		return;
+	case 2:
+		plasticityRate += newValue * mutationStrength;
+		return;
+	case 3:
+		plasticityThreshold += newValue * mutationStrength;
+		return;
+	case 4:
+		reliability += newValue * mutationStrength;
+		return;
 	}
 }
 
@@ -64,15 +64,15 @@ NeuronConnection Neuron::connect(Neuron &neuron)
 
 void Neuron::unconnect(Neuron &neuron)
 {
-	const auto it = std::find_if(_outputs.begin(), _outputs.end(), [&](NeuronConnection &conn) {
-		return conn.neuron->id == neuron.id;
-	});
+	const auto it = std::find_if(_outputs.begin(), _outputs.end(), [&](NeuronConnection &conn)
+								 { return conn.neuron->id == neuron.id; });
 
-	if (it == _outputs.end()) {
+	if (it == _outputs.end())
+	{
 		throw std::runtime_error("Neuron is not connected");
 	}
 
-	removeConnection(static_cast<const NeuronConnection&>(*it));
+	removeConnection(static_cast<NeuronConnection>(*it));
 }
 
 void Neuron::addConnection(NeuronConnection connection)
@@ -80,7 +80,7 @@ void Neuron::addConnection(NeuronConnection connection)
 	_outputs.push_back(connection);
 }
 
-void Neuron::removeConnection(NeuronConnection connection)
+void Neuron::removeConnection(const NeuronConnection &connection)
 {
 	std::remove(_outputs.begin(), _outputs.end(), connection);
 }
@@ -104,22 +104,27 @@ void Neuron::mutate()
 	int neuronCount = network.neurons.size();
 	int index = std::rand() % neuronCount;
 	Neuron &neuron = network.neurons.at(index);
-	if(static_cast<float>(std::rand()) > 0.5) {
+	if (static_cast<float>(std::rand()) > 0.5)
+	{
 		connect(neuron);
-	} else {
+	}
+	else
+	{
 		unconnect(neuron);
 	}
 }
 
 Neuron::Serialized Neuron::serialize()
 {
-	NeuronConnection::Serialized serialziedOutputs[outputs.size()];
-	std::copy(outputs.begin(), outputs.end(), serialziedOutputs);
+	std::vector<NeuronConnection::Serialized> serialziedOutputs;
+	std::transform(_outputs.begin(), _outputs.end(), std::back_inserter(serialziedOutputs),
+				   [](NeuronConnection &conn)
+				   { return conn.serialize(); });
 	return Neuron::Serialized{
 		id,
 		static_cast<uint16_t>(type),
 		outputs.size(),
-		serialziedOutputs,
+		serialziedOutputs.data(),
 	};
 }
 
