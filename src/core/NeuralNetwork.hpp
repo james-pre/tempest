@@ -25,11 +25,11 @@ class Neuron;
 class NeuronConnection
 {
 public:
-	Neuron *neuron;			   // ref to connected neuron
-	float strength;			   // strength of the connection (>1: excitatory, <1: inhibitory)
-	float plasticityRate;	   // how fast the strength changes
-	float plasticityThreshold; // the max strength
-	float reliability;		   // how reliable the passed value is
+	Neuron *neuron;				   // ref to connected neuron
+	float strength = 1;			   // strength of the connection (>1: excitatory, <1: inhibitory)
+	float plasticityRate = 0;	   // how fast the strength changes
+	float plasticityThreshold = 1; // the max strength
+	float reliability = 1;		   // how reliable the passed value is
 
 	struct Serialized
 	{
