@@ -7,20 +7,20 @@
 #include "../core/NeuralNetwork.hpp"
 #include "../core/File.hpp"
 
-namespace options = boost::program_options;
+namespace opts = boost::program_options;
 
 int main(int argc, char **argv)
 {
 	// Command-line options
 	try
 	{
-		options::options_description desc("Options");
-		desc.add_options()("help,h", "Display help message")("debug,d", "Show verbose/debug messages")("output,o", options::value<std::string>(), "Output file (for applicable output formats)")("format,f", options::value<std::string>()->default_value("text"), "Output format")("input", options::value<std::string>(), "Input file");
-		options::positional_options_description pos_desc;
+		opts::options_description desc("Options");
+		desc.add_options()("help,h", "Display help message")("debug,d", "Show verbose/debug messages")("output,o", opts::value<std::string>(), "Output file (for applicable output formats)")("format,f", opts::value<std::string>()->default_value("text"), "Output format")("input", opts::value<std::string>(), "Input file");
+		opts::positional_options_description pos_desc;
 		pos_desc.add("input", 1);
-		options::variables_map vm;
-		options::store(options::command_line_parser(argc, argv).options(desc).positional(pos_desc).run(), vm);
-		options::notify(vm);
+		opts::variables_map vm;
+		opts::store(opts::command_line_parser(argc, argv).options(desc).positional(pos_desc).run(), vm);
+		opts::notify(vm);
 
 		if (vm.count("help"))
 		{
