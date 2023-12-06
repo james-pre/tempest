@@ -46,10 +46,10 @@ int main(int argc, char **argv)
 
 		const File file = File::Read(path);
 
-		std::cout << "Header: \n\tmagic: " << file.magic << "\n";
+		std::cout << "Header: \n\tmagic: " << file.magic() << "\n";
 		const unsigned char _type = file.contents.type;
 		const std::string type = (_type < maxFileType) ? fileTypes.at(_type) : "Unknown (" + std::to_string(_type) + ")";
-		std::cout << "\ttype: " << type << "\n\tversion: " << std::to_string(file.version) << std::endl;
+		std::cout << "\ttype: " << type << "\n\tversion: " << std::to_string(file.version()) << std::endl;
 
 		if (format == "gv" || format == "dot")
 		{
@@ -57,15 +57,16 @@ int main(int argc, char **argv)
 
 		if (format == "text")
 		{
-			switch(file.type) {
-				case FileType::NONE:
-					break;
-				case FileType::NETWORK:
-					break;
-				case FileType::PARTIAL:
-					break;
-				case FileType::FULL:
-					break;
+			switch (file.type())
+			{
+			case FileType::NONE:
+				break;
+			case FileType::NETWORK:
+				break;
+			case FileType::PARTIAL:
+				break;
+			case FileType::FULL:
+				break;
 			}
 			return 0;
 		}

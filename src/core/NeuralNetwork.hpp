@@ -42,9 +42,8 @@ public:
 	Serialized serialize();
 	void mutate();
 	static NeuronConnection Deserialize(Serialized &data, Neuron &neuron);
-	inline bool operator==(const NeuronConnection& other) const {
-		return this == &other;
-	}
+
+	inline bool operator==(const NeuronConnection& other) const { return this == &other; }
 };
 
 class NeuralNetwork;

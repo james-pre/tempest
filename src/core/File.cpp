@@ -3,12 +3,7 @@
 #include "utils.hpp"
 #include "File.hpp"
 
-File::File(FileContents contents) : _contents(contents),
-									contents(contents),
-									magic(std::string(contents.magic)),
-									type(static_cast<FileType>(contents.type)),
-									version(contents.version),
-									data(contents.data)
+File::File(Contents contents) : contents(contents)
 {
 }
 
@@ -20,12 +15,12 @@ File File::Read(std::string path)
 		throw std::runtime_error("Failed to open file: " + path);
 	}
 
-	const FileContents contents = {};
+	const Contents contents = {};
 	input.read((char *)&contents, sizeof(contents));
 	input.close();
 
 	std::string magic = contents.magic;
-	if (magic != File::Magic)
+	if (magic != Magic)
 	{
 		throw std::runtime_error("Invalid file (bad magic)");
 	}
