@@ -17,7 +17,7 @@ enum class FileType
 
 constexpr const int maxFileType = 4;
 
-constexpr std::array<const char *, maxFileType> fileTypes = {"None", "Network", "Partial", "Full"};
+constexpr std::array<const char *, maxFileType> fileTypes = {"none", "network", "partial", "full"};
 
 class File
 {
