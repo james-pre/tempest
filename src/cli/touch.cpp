@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 	file.magic("BSML");
 
 	FileType type;
-	const std::string type_string = vm["type"].as<std::string>();
+	std::string type_string = vm["type"].as<std::string>();
 	std::transform(type_string.begin(), type_string.end(), type_string.begin(), ::tolower);
 	auto type_it = std::find(fileTypes.begin(), fileTypes.end(), type_string);
 	if (type_it != fileTypes.end())
@@ -112,7 +112,7 @@ int main(int argc, char **argv)
 	}
 	file.version(version);
 
-	
+
 
 	file.type();
 
