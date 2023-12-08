@@ -55,7 +55,7 @@ public:
 
 	static File Read(std::string path);
 
-	static constexpr char Magic[5] = "BSML";
+	static constexpr char Magic[5] = "TPST";
 };
 
 #endif

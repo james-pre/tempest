@@ -1,6 +1,6 @@
-# Blankstorm Machine Learning
+# Tempest
 
-A simple C++ evolution simulator that allows you to train loose neural networks.
+Tempest is a machine learning engine written in C++ for training loose neural networks. 
 
 ## Getting Started
 
@@ -13,23 +13,9 @@ You can download a pre-built binary from the releases page or build from source 
 
 ### Building from source
 
-Clone the repository to your local machine
-
-```bash
-git clone https://github.com/blankstorm/ml.git
-```
-
-Navigate to the project directory
-
-```bash
-cd ml
-```
-
-Run the build script
-
-```bash
-./build.sh
-```
+1. Clone the repository to your local machine (`git clone`)
+2. Navigate to the project directory
+3. Run `./build.sh`
 
 ## License
 

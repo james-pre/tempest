@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 
 	File file({});
 
-	file.magic("BSML");
+	file.magic(File::Magic);
 
 	FileType type;
 	std::string type_string = vm["type"].as<std::string>();
