@@ -19,7 +19,7 @@ int main(int argc, char **argv)
 		("output", opts::value<std::string>(), "Output file")
 		("force,f", "Overwrite files if they already exist")
 		("type,t", opts::value<std::string>()->default_value("none"),"type")
-		("version,v", opts::value<uint16_t>()->default_value(0));
+		("version,v", opts::value<unsigned int>()->default_value(0));
 	opts::positional_options_description pos_desc;
 	pos_desc.add("output", 1);
 	opts::variables_map vm;
@@ -87,8 +87,8 @@ int main(int argc, char **argv)
 	}
 	file.type(type);
 
-	File::Version version;
-	const std::string version_string = vm["version"].as<std::string>();
+	File::Version version = vm["version"].as<File::Version>();
+	/*const std::string version_string = vm["version"].as<std::string>();
 	try
 	{
 		size_t pos;
@@ -109,14 +109,12 @@ int main(int argc, char **argv)
 	catch (const std::exception &ex)
 	{
 		std::cerr << ex.what() << std::endl;
-	}
+	}*/
 	file.version(version);
-
-
 
 	file.type();
 
-	output.flush();
+	output.write((char*) &file.contents, sizeof(file.contents));
 	output.close();
 	return 0;
 }

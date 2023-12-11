@@ -75,9 +75,9 @@ int main(int argc, char **argv)
 				out << "";
 				break;
 			case FileType::NETWORK:
-				out << "digraph net_" << std::to_string(data.network->id) << " {\n";
-				for(size_t i = 0; i < data.network->num_neurons; i++) {
-					Neuron::Serialized &neuron = data.network->neurons[i];
+				out << "digraph net_" << std::to_string(data.network.id) << " {\n";
+				for(size_t i = 0; i < data.network.num_neurons; i++) {
+					Neuron::Serialized &neuron = data.network.neurons[i];
 					out << "\tn_" << std::to_string(neuron.id) << " -> {";
 					for(size_t o = 0; o < neuron.num_outputs; o++) {
 						NeuronConnection::Serialized &conn = neuron.outputs[i];
@@ -101,29 +101,33 @@ int main(int argc, char **argv)
 		else if (format == "text")
 		{		
 
-			switch (file.type())
-			{
-			case FileType::NONE:
+			if (file.type() == FileType::NONE) {
 				out << "";
-				break;
-			case FileType::NETWORK:
-				out << "Network " << std::to_string(data.network->id) << ":\n";
-				for(size_t i = 0; i < data.network->num_neurons; i++) {
-					Neuron::Serialized &neuron = data.network->neurons[i];
-					out << "\tNeuron " << neuron.id << ":\n";
+			}
+			if (file.type() == FileType::NETWORK) {
+				out << "Network " << std::to_string(data.network.id) << ":\n";
+				/*Neuron::Serialized* _neurons = new Neuron::Serialized[data.network.num_neurons];
+				if(_neurons == nullptr) {
+					std::cerr << "Allocation for neurons failed." << std::endl;
+					return 1;
+				}
+				std::memcpy(_neurons, data.network.neurons, sizeof(Neuron::Serialized) * data.network.num_neurons);*/
+				for(size_t i = 0; i < data.network.num_neurons; i++) {
+					Neuron::Serialized neuron = data.network.neurons[i];
+					out << "\tNeuron " << std::to_string(neuron.id) << "(" << neuron.type << "," << neuron.num_outputs << " outputs):\n";
 					for(size_t o = 0; o < neuron.num_outputs; o++) {
-						NeuronConnection::Serialized &conn = neuron.outputs[i];
+						NeuronConnection::Serialized &conn = neuron.outputs[o];
 						out << "" << std::to_string(conn.neuron) << " (" << std::to_string(conn.strength) << ", " << std::to_string(conn.plasticityRate) << ", " << std::to_string(conn.plasticityThreshold) << ", " << std::to_string(conn.reliability) << ")";
 					}
 					out << '\n';
 				}
-				break;
-			case FileType::PARTIAL:
+				//delete[] _neurons;
+			}
+			if (file.type() == FileType::PARTIAL) {
 				out << "Not supported" << std::endl;
-				break;
-			case FileType::FULL:
+			}
+			if (file.type() == FileType::FULL) {
 				out << "Not supported" << std::endl;
-				break;
 			}
 		}
 

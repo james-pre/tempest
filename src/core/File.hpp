@@ -26,7 +26,7 @@ public:
 
 	union Data
 	{
-		NeuralNetwork::Serialized *network;
+		NeuralNetwork::Serialized network;
 	} __attribute__((packed));
 
 	struct Contents

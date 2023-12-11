@@ -57,10 +57,10 @@ private:
 
 public:
 	Neuron(NeuronType neuronType, NeuralNetwork &network, uint64_t id = 0);
-	const NeuronType &type = _type;
+	inline NeuronType type() const { return _type; }
 	NeuralNetwork &network;
-	const std::vector<NeuronConnection> &outputs = _outputs;
-	const uint64_t &id = _id;
+	inline const std::vector<NeuronConnection> outputs() const { return _outputs; }
+	inline uint64_t id() const { return _id; }
 	NeuronConnection connect(Neuron &neuron);
 	void unconnect(Neuron &neuron);
 	void addConnection(NeuronConnection connection);
@@ -83,9 +83,10 @@ public:
 
 class NeuralNetwork
 {
-
+private:
+	uint64_t _id;
 public:
-	NeuralNetwork(ActivationFunction activationFunction = reluDefaultActivation);
+	NeuralNetwork(ActivationFunction activationFunction = reluDefaultActivation, uint64_t id = 0);
 	~NeuralNetwork();
 	ActivationFunction activationFunction;
 	std::vector<Neuron> neurons;
@@ -98,7 +99,7 @@ public:
 	{
 		uint64_t id;
 		uint64_t num_neurons;
-		Neuron::Serialized neurons[];
+		Neuron::Serialized *neurons;
 	} __attribute__((packed));
 
 	Serialized serialize();

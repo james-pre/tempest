@@ -1,12 +1,13 @@
 #include <ctime>
 #include <cstdlib>
+#include <cstring>
 #include <stdexcept>
 #include "NeuralNetwork.hpp"
 
 NeuronConnection::Serialized NeuronConnection::serialize()
 {
 	return NeuronConnection::Serialized{
-		neuron->id,
+		neuron->id(),
 		strength,
 		plasticityRate,
 		plasticityThreshold,
@@ -65,7 +66,7 @@ NeuronConnection Neuron::connect(Neuron &neuron)
 void Neuron::unconnect(Neuron &neuron)
 {
 	const auto it = std::find_if(_outputs.begin(), _outputs.end(), [&](NeuronConnection &conn)
-								 { return conn.neuron->id == neuron.id; });
+								 { return conn.neuron->id() == neuron.id(); });
 
 	if (it == _outputs.end())
 	{
@@ -120,12 +121,15 @@ Neuron::Serialized Neuron::serialize()
 	std::transform(_outputs.begin(), _outputs.end(), std::back_inserter(serialziedOutputs),
 				   [](NeuronConnection &conn)
 				   { return conn.serialize(); });
-	return Neuron::Serialized{
-		id,
-		static_cast<uint16_t>(type),
-		outputs.size(),
-		serialziedOutputs.data(),
+	
+	Neuron::Serialized out = {
+		_id,
+		static_cast<uint16_t>(_type),
+		_outputs.size(),
+		new NeuronConnection::Serialized[_outputs.size()]
 	};
+	std::memcpy(out.outputs, serialziedOutputs.data(), sizeof(NeuronConnection::Serialized) * _outputs.size());
+	return out;
 }
 
 Neuron Neuron::Deserialize(Neuron::Serialized &data, NeuralNetwork &network)
@@ -133,7 +137,9 @@ Neuron Neuron::Deserialize(Neuron::Serialized &data, NeuralNetwork &network)
 	return Neuron(static_cast<NeuronType>(data.type), network, data.id);
 }
 
-NeuralNetwork::NeuralNetwork(ActivationFunction activationFunction) : activationFunction(activationFunction) {}
+NeuralNetwork::NeuralNetwork(ActivationFunction activationFunction, uint64_t id) : activationFunction(activationFunction) {
+	_id = id ? id : reinterpret_cast<std::uintptr_t>(&*this);
+}
 
 NeuralNetwork::~NeuralNetwork()
 {
@@ -144,7 +150,7 @@ std::vector<Neuron> NeuralNetwork::neuronsOfType(NeuronType type)
 	std::vector<Neuron> ofType;
 	for (Neuron &neuron : neurons)
 	{
-		if (neuron.type == type)
+		if (neuron.type() == type)
 		{
 			ofType.push_back(neuron);
 		}
@@ -191,4 +197,20 @@ std::vector<float> NeuralNetwork::processInput(std::vector<float> inputValues)
 	}
 
 	return outputValues;
+}
+
+NeuralNetwork::Serialized NeuralNetwork::serialize()
+{
+	std::vector<Neuron::Serialized> serialziedneurons;
+	std::transform(neurons.begin(), neurons.end(), std::back_inserter(serialziedneurons),
+				   [](Neuron &neuron)
+				   { return neuron.serialize(); });
+	
+	NeuralNetwork::Serialized out = {
+		_id,
+		neurons.size(),
+		serialziedneurons.data()
+	};
+	//std::memcpy(out.neurons, serialziedneurons.data(), sizeof(Neuron::Serialized) * neurons.size());
+	return out;
 }
