@@ -53,14 +53,14 @@ class Neuron
 private:
 	NeuronType _type;
 	std::vector<NeuronConnection> _outputs;
-	uint64_t _id;
+	size_t _id;
 
 public:
-	Neuron(NeuronType neuronType, NeuralNetwork &network, uint64_t id = 0);
+	Neuron(NeuronType neuronType, NeuralNetwork &network, size_t id = 0);
 	inline NeuronType type() const { return _type; }
 	NeuralNetwork &network;
 	inline const std::vector<NeuronConnection> outputs() const { return _outputs; }
-	inline uint64_t id() const { return _id; }
+	size_t id() const;
 	NeuronConnection connect(Neuron &neuron);
 	void unconnect(Neuron &neuron);
 	void addConnection(NeuronConnection connection);
@@ -84,12 +84,18 @@ public:
 class NeuralNetwork
 {
 private:
-	uint64_t _id;
+	size_t _id;
+	std::vector<Neuron> _neurons;
 public:
-	NeuralNetwork(ActivationFunction activationFunction = reluDefaultActivation, uint64_t id = 0);
+	NeuralNetwork(ActivationFunction activationFunction = reluDefaultActivation, size_t id = 0);
 	~NeuralNetwork();
 	ActivationFunction activationFunction;
-	std::vector<Neuron> neurons;
+	
+	Neuron &neuron(size_t id);
+	inline size_t size() const { return _neurons.size(); }
+	inline void addNeuron(Neuron &neuron) { _neurons.push_back(neuron); };
+	size_t idOf(const Neuron &neuron) const;
+    void removeNeuron(size_t id);
 	std::vector<Neuron> neuronsOfType(NeuronType type);
 	void update();
 	void mutate();

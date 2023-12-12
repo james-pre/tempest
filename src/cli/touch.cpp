@@ -19,6 +19,7 @@ int main(int argc, char **argv)
 		("output", opts::value<std::string>(), "Output file")
 		("force,f", "Overwrite files if they already exist")
 		("type,t", opts::value<std::string>()->default_value("none"),"type")
+		("debug-create", opts::value<unsigned>()->default_value(1),"Creates data for debugging")
 		("version,v", opts::value<unsigned int>()->default_value(0));
 	opts::positional_options_description pos_desc;
 	pos_desc.add("output", 1);
@@ -88,31 +89,22 @@ int main(int argc, char **argv)
 	file.type(type);
 
 	File::Version version = vm["version"].as<File::Version>();
-	/*const std::string version_string = vm["version"].as<std::string>();
-	try
-	{
-		size_t pos;
-		unsigned long value = std::stoul(version_string, &pos);
-		if (pos != version_string.length())
-		{
-			std::cout << "Warning: type truncated" << std::endl;
-		}
-
-		if (value > std::numeric_limits<uint8_t>::max())
-		{
-			std::cerr << "type to large" << std::endl;
-			return 1;
-		}
-
-		version = static_cast<File::Version>(value);
-	}
-	catch (const std::exception &ex)
-	{
-		std::cerr << ex.what() << std::endl;
-	}*/
 	file.version(version);
 
-	file.type();
+	if(type == FileType::NETWORK && vm.count("debug-create"))
+	{
+		NeuralNetwork network(0);
+		unsigned num_neurons = vm["debug-create"].as<unsigned>();
+		for(unsigned int i = 0; i < num_neurons; i++) {
+			Neuron neuron = Neuron(static_cast<NeuronType>(i % 4), network);
+			for(unsigned int j = 0; j < i % std::min(num_neurons, 6u); j++)
+			{
+				neuron.connect(network.neurons.at(i % std::max(j, 1u)));
+			}
+			network.neurons.push_back(neuron);
+		}
+		file.data({ network.serialize() });
+	}
 
 	output.write((char*) &file.contents, sizeof(file.contents));
 	output.close();
