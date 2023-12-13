@@ -4,6 +4,8 @@
 #include <vector>
 #include <functional>
 #include <cstdint>
+#include <map>
+#include <stdexcept>
 
 typedef std::function<float(float)> ActivationFunction;
 
@@ -39,11 +41,32 @@ public:
 		float plasticityThreshold;
 		float reliability;
 	} __attribute__((packed));
-	Serialized serialize();
-	void mutate();
-	static NeuronConnection Deserialize(Serialized &data, Neuron &neuron);
 
-	inline bool operator==(const NeuronConnection& other) const { return this == &other; }
+	Serialized serialize() const
+	{
+		return NeuronConnection::Serialized{
+			neuron->id(),
+			strength,
+			plasticityRate,
+			plasticityThreshold,
+			reliability,
+		};
+	};
+
+	void mutate();
+
+	static NeuronConnection Deserialize(Serialized &data, Neuron &neuron)
+	{
+		return NeuronConnection{
+			&neuron,
+			data.strength,
+			data.plasticityRate,
+			data.plasticityThreshold,
+			data.reliability,
+		};
+	}
+
+	bool operator==(const NeuronConnection &other) const { return this == &other; }
 };
 
 class NeuralNetwork;
@@ -54,18 +77,55 @@ private:
 	NeuronType _type;
 	std::vector<NeuronConnection> _outputs;
 	size_t _id;
+	NeuralNetwork *_network;
 
 public:
-	Neuron(NeuronType neuronType, NeuralNetwork &network, size_t id = 0);
+	Neuron(NeuronType neuronType, NeuralNetwork &network, size_t id = 0)
+		: _type(neuronType), _id(id ? id : network.size()), _network(&network) {}
+
 	inline NeuronType type() const { return _type; }
-	NeuralNetwork &network;
+	inline NeuralNetwork &network() const
+	{
+		return _network ? *_network : throw std::runtime_error("Neuron not associated with a network");
+	}
 	inline const std::vector<NeuronConnection> outputs() const { return _outputs; }
-	size_t id() const;
-	NeuronConnection connect(Neuron &neuron);
-	void unconnect(Neuron &neuron);
-	void addConnection(NeuronConnection connection);
-	void removeConnection(const NeuronConnection &connection);
+	size_t id() const
+	{
+		return network().idOf(this);
+	}
+
+	void addConnection(NeuronConnection connection)
+	{
+		_outputs.push_back(connection);
+	}
+
+	void removeConnection(const NeuronConnection &connection)
+	{
+		std::remove(_outputs.begin(), _outputs.end(), connection);
+	}
+
+	NeuronConnection connect(Neuron &neuron)
+	{
+		NeuronConnection connection = {&neuron};
+		addConnection(connection);
+		return connection;
+	}
+
+	void unconnect(Neuron &neuron)
+	{
+		const auto it = std::find_if(_outputs.begin(), _outputs.end(), [&](NeuronConnection &conn)
+									 { return conn.neuron->id() == neuron.id(); });
+
+		if (it == _outputs.end())
+		{
+			throw std::runtime_error("Neuron is not connected");
+		}
+
+		removeConnection(static_cast<NeuronConnection>(*it));
+	}
+
 	float value = 0;
+
 	void update();
 	void mutate();
 
@@ -77,26 +137,104 @@ public:
 		NeuronConnection::Serialized *outputs;
 	} __attribute__((packed));
 
-	Serialized serialize();
-	static Neuron Deserialize(Serialized &data, NeuralNetwork &network);
+	Serialized serialize() const
+	{
+		std::vector<NeuronConnection::Serialized> serializedOutputs;
+		for(const NeuronConnection &conn : outputs())
+		{
+			serializedOutputs.push_back(conn.serialize());
+		}
+
+		return {
+			id(),
+			static_cast<uint16_t>(_type),
+			_outputs.size(),
+			serializedOutputs.data()
+		};
+	}
+	static Neuron Deserialize(Serialized &data, NeuralNetwork &network)
+	{
+		Neuron neuron(static_cast<NeuronType>(data.type), network, data.id);
+		for (size_t i = 0; i < data.num_outputs; ++i)
+	    {
+	        neuron.addConnection(NeuronConnection::Deserialize(data.outputs[i], network.neuron(data.outputs[i].neuron)));
+	    }
+		return neuron;
+	}
 };
 
 class NeuralNetwork
 {
 private:
 	size_t _id;
-	std::vector<Neuron> _neurons;
+	std::map<size_t, Neuron> _neurons;
+
 public:
-	NeuralNetwork(ActivationFunction activationFunction = reluDefaultActivation, size_t id = 0);
-	~NeuralNetwork();
+	NeuralNetwork(ActivationFunction activationFunction = reluDefaultActivation, size_t id = 0) : _id(id ? id : reinterpret_cast<std::uintptr_t>(&*this)), activationFunction(activationFunction) {}
+
 	ActivationFunction activationFunction;
+
+	Neuron &neuron(size_t id)
+	{
+		auto it = _neurons.find(id);
+		if(it == _neurons.end()) {
+			throw std::out_of_range("Invalid neuron ID");
+		}
 	
-	Neuron &neuron(size_t id);
+		return it->second;
+	}
+
 	inline size_t size() const { return _neurons.size(); }
-	inline void addNeuron(Neuron &neuron) { _neurons.push_back(neuron); };
-	size_t idOf(const Neuron &neuron) const;
-    void removeNeuron(size_t id);
-	std::vector<Neuron> neuronsOfType(NeuronType type);
+	inline void addNeuron(Neuron &neuron, size_t id = SIZE_MAX)
+	{
+		if (id == SIZE_MAX)
+		{
+			id = size();
+		}
+
+		auto result = _neurons.insert(std::make_pair(id, std::move(neuron)));
+		if (!result.second)
+		{
+			throw std::runtime_error("Neuron with the same ID already exists");
+		}
+	}
+
+	size_t idOf(const Neuron *neuron) const
+	{
+		for (const auto &[id, n] : _neurons)
+		{
+			if (neuron == &n)
+			{
+				return id;
+			}
+		}
+		throw std::runtime_error("Neuron not found in network");
+	}
+
+	void removeNeuron(size_t id)
+	{
+		auto it = _neurons.find(id);
+		if (it == _neurons.end()) {
+			throw std::out_of_range("Invalid neuron ID");
+		}
+		
+		_neurons.erase(it);
+	}
+
+	std::vector<Neuron> neuronsOfType(NeuronType type)
+	{
+		std::vector<Neuron> ofType;
+		for (const auto &[id, neuron] : _neurons)
+		{
+			if (neuron.type() == type)
+			{
+				ofType.push_back(neuron);
+			}
+		}
+
+		return ofType;
+	}
+
 	void update();
 	void mutate();
 	std::vector<float> processInput(std::vector<float> inputValues);
@@ -108,8 +246,32 @@ public:
 		Neuron::Serialized *neurons;
 	} __attribute__((packed));
 
-	Serialized serialize();
-	static NeuralNetwork Deserialize(Serialized &data);
+	Serialized serialize()
+	{
+		std::vector<Neuron::Serialized> serializedNeurons;
+
+		for (const auto &[id, neuron] : _neurons)
+		{
+			serializedNeurons.push_back(neuron.serialize());
+		}
+
+		return {
+			_id,
+			size(),
+			serializedNeurons.data()
+		};
+	}
+	static NeuralNetwork Deserialize(Serialized &data)
+	{
+		NeuralNetwork network(reluDefaultActivation, data.id);
+		for(size_t i = 0; i < data.num_neurons; i++)
+		{
+			Neuron neuron = Neuron::Deserialize(data.neurons[i], network);
+			network.addNeuron(neuron);
+		}
+
+		return network;
+	}
 };
 
 #endif

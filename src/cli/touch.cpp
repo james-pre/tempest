@@ -99,9 +99,9 @@ int main(int argc, char **argv)
 			Neuron neuron = Neuron(static_cast<NeuronType>(i % 4), network);
 			for(unsigned int j = 0; j < i % std::min(num_neurons, 6u); j++)
 			{
-				neuron.connect(network.neurons.at(i % std::max(j, 1u)));
+				neuron.connect(network.neuron(i % std::max(j, 1u)));
 			}
-			network.neurons.push_back(neuron);
+			network.addNeuron(neuron);
 		}
 		file.data({ network.serialize() });
 	}
