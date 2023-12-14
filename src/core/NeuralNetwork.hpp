@@ -42,16 +42,7 @@ public:
 		float reliability;
 	} __attribute__((packed));
 
-	Serialized serialize() const
-	{
-		return NeuronConnection::Serialized{
-			neuron->id(),
-			strength,
-			plasticityRate,
-			plasticityThreshold,
-			reliability,
-		};
-	};
+	Serialized serialize() const;
 
 	void mutate();
 
@@ -77,22 +68,13 @@ private:
 	NeuronType _type;
 	std::vector<NeuronConnection> _outputs;
 	size_t _id;
-	NeuralNetwork *_network;
-
 public:
-	Neuron(NeuronType neuronType, NeuralNetwork &network, size_t id = 0)
-		: _type(neuronType), _id(id ? id : network.size()), _network(&network) {}
+	NeuralNetwork &network;
+	Neuron(NeuronType neuronType, NeuralNetwork &network, size_t id = SIZE_MAX);
 
 	inline NeuronType type() const { return _type; }
-	inline NeuralNetwork &network() const
-	{
-		return _network ? *_network : throw std::runtime_error("Neuron not associated with a network");
-	}
 	inline const std::vector<NeuronConnection> outputs() const { return _outputs; }
-	size_t id() const
-	{
-		return network().idOf(this);
-	}
+	size_t id() const;
 
 	void addConnection(NeuronConnection connection)
 	{
@@ -152,15 +134,7 @@ public:
 			serializedOutputs.data()
 		};
 	}
-	static Neuron Deserialize(Serialized &data, NeuralNetwork &network)
-	{
-		Neuron neuron(static_cast<NeuronType>(data.type), network, data.id);
-		for (size_t i = 0; i < data.num_outputs; ++i)
-	    {
-	        neuron.addConnection(NeuronConnection::Deserialize(data.outputs[i], network.neuron(data.outputs[i].neuron)));
-	    }
-		return neuron;
-	}
+	static Neuron Deserialize(Serialized &data, NeuralNetwork &network);
 };
 
 class NeuralNetwork

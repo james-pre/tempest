@@ -4,6 +4,17 @@
 #include <stdexcept>
 #include "NeuralNetwork.hpp"
 
+NeuronConnection::Serialized NeuronConnection::serialize() const
+{
+	return NeuronConnection::Serialized{
+		neuron->id(),
+		strength,
+		plasticityRate,
+		plasticityThreshold,
+		reliability,
+	};
+};
+
 // Todo: This should be changed to properly account for the different attributes
 void NeuronConnection::mutate()
 {
@@ -29,9 +40,27 @@ void NeuronConnection::mutate()
 	}
 }
 
+Neuron::Neuron(NeuronType neuronType, NeuralNetwork &network, size_t id)
+		: _type(neuronType), _id(id != SIZE_MAX ? id : network.size()), network(network) {}
+
+size_t Neuron::id() const
+{
+	return network.idOf(this);
+}
+
+Neuron Neuron::Deserialize(Neuron::Serialized &data, NeuralNetwork &network)
+{
+	Neuron neuron(static_cast<NeuronType>(data.type), network, data.id);
+	for (size_t i = 0; i < data.num_outputs; ++i)
+	{
+		neuron.addConnection(NeuronConnection::Deserialize(data.outputs[i], network.neuron(data.outputs[i].neuron)));
+	}
+	return neuron;
+}
+
 void Neuron::update()
 {
-	float activation = network().activationFunction(value);
+	float activation = network.activationFunction(value);
 
 	for (NeuronConnection &output : _outputs)
 	{
@@ -45,8 +74,8 @@ void Neuron::update()
 void Neuron::mutate()
 {
 	std::srand(static_cast<unsigned>(std::time(0)));
-	size_t id = std::rand() % network().size();
-	Neuron &neuron = network().neuron(id);
+	size_t id = std::rand() % network.size();
+	Neuron &neuron = network.neuron(id);
 	if (static_cast<float>(std::rand()) > 0.5)
 	{
 		connect(neuron);
