@@ -63,7 +63,8 @@ int main(int argc, char **argv)
 			return 0;
 		}
 
-		std::ofstream out(output);
+		//std::streambuf * buf = (output == "/proc/stdout") ? std::cout.rdbuf() : std::ofstream(output).rdbuf();
+		std::ostream out((output == "/proc/stdout") ? std::cout.rdbuf() : std::ofstream(output).rdbuf());
 		File::Data data = file.data();
 
 		if (format == "gv" || format == "dot")
@@ -105,7 +106,8 @@ int main(int argc, char **argv)
 				out << "";
 			}
 			if (file.type() == FileType::NETWORK) {
-				out << "Network " << std::to_string(data.network.id) << ":\n";
+				out << "Network " << std::to_string(data.network.id) << " (" << std::to_string(data.network.num_neurons) << " neurons):" << std::endl;
+				out.flush();
 				/*Neuron::Serialized* _neurons = new Neuron::Serialized[data.network.num_neurons];
 				if(_neurons == nullptr) {
 					std::cerr << "Allocation for neurons failed." << std::endl;
@@ -137,7 +139,6 @@ int main(int argc, char **argv)
 		}
 
 		out.flush();
-		out.close();
 		return 0;
 		
 	}
