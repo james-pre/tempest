@@ -103,7 +103,8 @@ int main(int argc, char **argv)
 			}
 			network.addNeuron(neuron);
 		}
-		file.data({ network.serialize() });
+		File::Data data = { .network = network.serialize() };
+		file.data(data);
 	}
 
 	output.write((char*) &file.contents, sizeof(file.contents));

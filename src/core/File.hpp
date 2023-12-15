@@ -4,6 +4,8 @@
 #include <string>
 #include <cstdint>
 #include <algorithm>
+#include <stdexcept>
+#include <fstream>
 #include "NeuralNetwork.hpp"
 #include "Environment.hpp"
 
@@ -51,9 +53,42 @@ public:
 	inline const Data data() const { return contents.data; }
 	inline void data(const Data &data) { contents.data = data; }
 
-	File(Contents contents);
+	File(Contents contents) : contents(contents)
+	{
+	}
 
-	static File Read(std::string path);
+	void write(std::string path) const
+	{
+		std::ofstream output(path, std::ios::binary);
+		if (!output.is_open())
+		{
+			throw std::runtime_error("Failed to open file for writing: " + path);
+		}
+
+		output.write(reinterpret_cast<const char *>(&contents), sizeof(contents));
+		output.close();
+	}
+
+	static File Read(std::string path)
+	{
+		std::ifstream input(path);
+		if (!input.is_open())
+		{
+			throw std::runtime_error("Failed to open file: " + path);
+		}
+
+		const Contents contents = {};
+		input.read((char *)&contents, sizeof(contents));
+		input.close();
+
+		std::string magic = contents.magic;
+		if (magic != Magic)
+		{
+			throw std::runtime_error("Invalid file (bad magic)");
+		}
+
+		return File(contents);
+	}
 
 	static constexpr char Magic[5] = "TPST";
 };
