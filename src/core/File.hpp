@@ -27,7 +27,28 @@ public:
 	union Data
 	{
 		NeuralNetwork::Serialized network;
-	} __attribute__((packed));
+
+
+		Data(const Data &other)
+            : network(other.network)
+        {}
+
+		Data(const NeuralNetwork::Serialized &serialized)
+            : network(serialized)
+        {}
+
+		Data() : network{} {}
+
+		~Data() {}
+
+		Data &operator=(const Data &other) {
+            if (this != &other) {
+                network = other.network;
+                // If there are other members in the union, copy them as well
+            }
+            return *this;
+        }
+	};
 
 	struct Contents
 	{
@@ -35,7 +56,7 @@ public:
 		uint8_t type;
 		uint16_t version;
 		Data data;
-	} __attribute__((packed));
+	};
 
 	Contents contents;
 
@@ -51,7 +72,9 @@ public:
 	inline const Data data() const { return contents.data; }
 	inline void data(const Data &data) { contents.data = data; }
 
-	File(Contents contents);
+	File(Contents contents) : contents(contents)
+	{
+	}
 
 	static File Read(std::string path);
 

@@ -3,10 +3,6 @@
 #include "utils.hpp"
 #include "File.hpp"
 
-File::File(Contents contents) : contents(contents)
-{
-}
-
 File File::Read(std::string path)
 {
 	std::ifstream input(path);

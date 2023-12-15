@@ -77,12 +77,12 @@ int main(int argc, char **argv)
 				break;
 			case FileType::NETWORK:
 				out << "digraph net_" << std::to_string(data.network.id) << " {\n";
-				for(size_t i = 0; i < data.network.num_neurons; i++) {
-					Neuron::Serialized &neuron = data.network.neurons[i];
+				for(Neuron::Serialized &neuron : data.network.neurons)
+				{
 					out << "\tn_" << std::to_string(neuron.id) << " -> {";
-					for(size_t o = 0; o < neuron.num_outputs; o++) {
-						NeuronConnection::Serialized &conn = neuron.outputs[i];
-						if(o != 0) {
+					for(NeuronConnection::Serialized &conn : neuron.outputs)
+					{
+						if(&conn != &neuron.outputs[0]) {
 							out << ',';
 						}
 						out << std::to_string(conn.neuron);
@@ -106,19 +106,18 @@ int main(int argc, char **argv)
 				out << "";
 			}
 			if (file.type() == FileType::NETWORK) {
-				out << "Network " << std::to_string(data.network.id) << " (" << std::to_string(data.network.num_neurons) << " neurons):" << std::endl;
-				out.flush();
+				out << "Network " << std::to_string(data.network.id) << " (" << std::to_string(data.network.neurons.size()) << " neurons):" << std::endl;
 				/*Neuron::Serialized* _neurons = new Neuron::Serialized[data.network.num_neurons];
 				if(_neurons == nullptr) {
 					std::cerr << "Allocation for neurons failed." << std::endl;
 					return 1;
 				}
 				std::memcpy(_neurons, data.network.neurons, sizeof(Neuron::Serialized) * data.network.num_neurons);*/
-				for(size_t i = 0; i < data.network.num_neurons; i++) {
-					Neuron::Serialized neuron = data.network.neurons[i];
-					out << "\tNeuron " << std::to_string(neuron.id) << "(" << neuron.type << "," << neuron.num_outputs << " outputs):\n";
-					for(size_t o = 0; o < neuron.num_outputs; o++) {
-						NeuronConnection::Serialized &conn = neuron.outputs[o];
+				for(Neuron::Serialized &neuron : data.network.neurons)
+				{
+					out << "\tNeuron " << std::to_string(neuron.id) << "(" << neuron.type << "," << neuron.outputs.size() << " outputs):\n";
+					for(NeuronConnection::Serialized &conn : neuron.outputs)
+					{
 						out << "" << std::to_string(conn.neuron) << " (" << std::to_string(conn.strength) << ", " << std::to_string(conn.plasticityRate) << ", " << std::to_string(conn.plasticityThreshold) << ", " << std::to_string(conn.reliability) << ")";
 					}
 					out << '\n';
