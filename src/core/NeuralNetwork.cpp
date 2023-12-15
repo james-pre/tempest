@@ -51,9 +51,9 @@ size_t Neuron::id() const
 Neuron Neuron::Deserialize(Neuron::Serialized &data, NeuralNetwork &network)
 {
 	Neuron neuron(static_cast<NeuronType>(data.type), network, data.id);
-	for (size_t i = 0; i < data.num_outputs; ++i)
+	for (NeuronConnection::Serialized &conn : data.outputs)
 	{
-		neuron.addConnection(NeuronConnection::Deserialize(data.outputs[i], network.neuron(data.outputs[i].neuron)));
+		neuron.addConnection(NeuronConnection::Deserialize(conn, network.neuron(conn.neuron)));
 	}
 	return neuron;
 }

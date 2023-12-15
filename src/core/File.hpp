@@ -31,11 +31,15 @@ public:
 		NeuralNetwork::Serialized network;
 	} __attribute__((packed));
 
-	struct Contents
+	struct Header
 	{
 		char magic[5];
 		uint8_t type;
 		uint16_t version;
+	} __attribute__((packed));
+
+	struct Contents : Header
+	{
 		Data data;
 	} __attribute__((packed));
 
@@ -65,7 +69,21 @@ public:
 			throw std::runtime_error("Failed to open file for writing: " + path);
 		}
 
-		output.write(reinterpret_cast<const char *>(&contents), sizeof(contents));
+		output << contents.magic << contents.type << contents.version;
+
+		if(type() == FileType::NETWORK)
+		{
+			NeuralNetwork::Serialized net = data().network;
+			output << net.id << net.neurons.size();
+			for(Neuron::Serialized &neuron : net.neurons)
+			{
+				output << neuron.id << neuron.type;
+				for(NeuronConnection::Serialized &conn : neuron.outputs)
+				{
+					output << reinterpret_cast<const char*>(&conn);
+				}
+			}
+		}
 		output.close();
 	}
 

@@ -115,23 +115,21 @@ public:
 	{
 		uint64_t id;
 		uint16_t type;
-		uint64_t num_outputs;
-		NeuronConnection::Serialized *outputs;
-	} __attribute__((packed));
+		std::vector<NeuronConnection::Serialized> outputs;
+	};
 
 	Serialized serialize() const
 	{
-		std::vector<NeuronConnection::Serialized> serializedOutputs;
+		std::vector<NeuronConnection::Serialized> outputsData;
 		for(const NeuronConnection &conn : outputs())
 		{
-			serializedOutputs.push_back(conn.serialize());
+			outputsData.push_back(conn.serialize());
 		}
 
 		return {
 			id(),
 			static_cast<uint16_t>(_type),
-			_outputs.size(),
-			serializedOutputs.data()
+			outputsData
 		};
 	}
 	static Neuron Deserialize(Serialized &data, NeuralNetwork &network);
@@ -216,31 +214,29 @@ public:
 	struct Serialized
 	{
 		uint64_t id;
-		uint64_t num_neurons;
-		Neuron::Serialized *neurons;
-	} __attribute__((packed));
+		std::vector<Neuron::Serialized> neurons;
+	};
 
 	Serialized serialize()
 	{
-		std::vector<Neuron::Serialized> serializedNeurons;
+		std::vector<Neuron::Serialized> neuronsData;
 
 		for (const auto &[id, neuron] : _neurons)
 		{
-			serializedNeurons.push_back(neuron.serialize());
+			neuronsData.push_back(neuron.serialize());
 		}
 
 		return {
 			_id,
-			size(),
-			serializedNeurons.data()
+			neuronsData
 		};
 	}
 	static NeuralNetwork Deserialize(Serialized &data)
 	{
 		NeuralNetwork network(reluDefaultActivation, data.id);
-		for(size_t i = 0; i < data.num_neurons; i++)
+		for(Neuron::Serialized &neuronData : data.neurons)
 		{
-			Neuron neuron = Neuron::Deserialize(data.neurons[i], network);
+			Neuron neuron = Neuron::Deserialize(neuronData, network);
 			network.addNeuron(neuron);
 		}
 
