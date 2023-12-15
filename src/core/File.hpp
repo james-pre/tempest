@@ -29,7 +29,30 @@ public:
 	union Data
 	{
 		NeuralNetwork::Serialized network;
-	} __attribute__((packed));
+
+		Data(const Data &other)
+			: network(other.network)
+		{
+		}
+
+		Data(const NeuralNetwork::Serialized &network)
+			: network(network)
+		{
+		}
+
+		Data() : network{} {}
+
+		~Data() {}
+
+		Data &operator=(const Data &other)
+		{
+			if (this != &other)
+			{
+				network = other.network;
+			}
+			return *this;
+		}
+	};
 
 	struct Header
 	{
@@ -41,7 +64,7 @@ public:
 	struct Contents : Header
 	{
 		Data data;
-	} __attribute__((packed));
+	};
 
 	Contents contents;
 
@@ -69,18 +92,23 @@ public:
 			throw std::runtime_error("Failed to open file for writing: " + path);
 		}
 
-		output << contents.magic << contents.type << contents.version;
+		output.write(contents.magic, sizeof(contents.magic));
+		output.write(reinterpret_cast<const char *>(&contents.type), sizeof(contents.type));
+		output.write(reinterpret_cast<const char *>(&contents.version), sizeof(contents.version));
 
-		if(type() == FileType::NETWORK)
+		if (type() == FileType::NETWORK)
 		{
 			NeuralNetwork::Serialized net = data().network;
-			output << net.id << net.neurons.size();
-			for(Neuron::Serialized &neuron : net.neurons)
+			output.write(reinterpret_cast<const char *>(&net.id), sizeof(net.id));
+			size_t netSize = net.neurons.size();
+			output.write(reinterpret_cast<const char *>(&netSize), sizeof(netSize));
+			for (Neuron::Serialized &neuron : net.neurons)
 			{
-				output << neuron.id << neuron.type;
-				for(NeuronConnection::Serialized &conn : neuron.outputs)
+				output.write(reinterpret_cast<const char *>(&neuron.id), sizeof(neuron.id));
+				output.write(reinterpret_cast<const char *>(&neuron.type), sizeof(neuron.type));
+				for (NeuronConnection::Serialized &conn : neuron.outputs)
 				{
-					output << reinterpret_cast<const char*>(&conn);
+					output << reinterpret_cast<const char *>(&conn);
 				}
 			}
 		}

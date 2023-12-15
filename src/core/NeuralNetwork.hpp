@@ -217,7 +217,7 @@ public:
 		std::vector<Neuron::Serialized> neurons;
 	};
 
-	Serialized serialize()
+	Serialized serialize() const
 	{
 		std::vector<Neuron::Serialized> neuronsData;
 

@@ -41,13 +41,6 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	std::ofstream output(path);
-	if (output.bad() && !vm.count("force"))
-	{
-		std::cerr << "Ouput file exists (use force to overwrite)" << std::endl;
-		return 1;
-	}
-
 	std::cout << "Creating " << path << "\n";
 
 	File file({});
@@ -103,11 +96,11 @@ int main(int argc, char **argv)
 			}
 			network.addNeuron(neuron);
 		}
-		File::Data data = { .network = network.serialize() };
+		NeuralNetwork::Serialized netData(network.serialize());
+		File::Data data = File::Data(netData);
 		file.data(data);
 	}
 
-	output.write((char*) &file.contents, sizeof(file.contents));
-	output.close();
+	file.write(path);
 	return 0;
 }
