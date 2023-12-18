@@ -22,6 +22,10 @@ enum class NeuronType
 	OUTPUT,
 };
 
+constexpr const int maxNeuronType = 4;
+
+constexpr std::array<const char *, maxNeuronType> neuronTypes = {"none", "transitional", "input", "output"};
+
 class Neuron;
 
 class NeuronConnection

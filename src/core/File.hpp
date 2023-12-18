@@ -61,26 +61,50 @@ public:
 		uint16_t version;
 	} __attribute__((packed));
 
-	struct Contents : Header
+private:
+	template <typename T>
+	static void _writeSingle(std::ostream &output, const T &data)
 	{
-		Data data;
-	};
+		output.write(reinterpret_cast<const char *>(&data), sizeof(data));
+	}
 
-	Contents contents;
+	template <typename T>
+	static void _readSingle(std::istream &input, T &data)
+	{
+		input.read(reinterpret_cast<char *>(&data), sizeof(data));
+	}
 
-	inline const std::string magic() const { return std::string(contents.magic); }
-	inline void magic(const std::string &magic) { std::copy(magic.begin(), magic.end(), contents.magic); }
+protected:
+	template <typename... Args>
+	static void _write(std::ostream &output, const Args &...args)
+	{
+		(_writeSingle(output, args), ...);
+	}
 
-	inline FileType type() const { return static_cast<FileType>(contents.type); }
-	inline void type(const FileType type) { contents.type = static_cast<uint8_t>(type); }
+	template <typename... Args>
+	static void _read(std::istream &input, Args &...args)
+	{
+		(_readSingle(input, args), ...);
+	}
 
-	inline Version version() const { return contents.version; }
-	inline void version(const Version version) { contents.version = static_cast<uint16_t>(version); }
+public:
+	Header header;
+	Data data;
 
-	inline const Data data() const { return contents.data; }
-	inline void data(const Data &data) { contents.data = data; }
+	inline const std::string magic() const { return std::string(header.magic); }
+	inline void magic(const std::string &magic) { std::copy(magic.begin(), magic.end(), header.magic); }
 
-	File(Contents contents) : contents(contents)
+	inline FileType type() const { return static_cast<FileType>(header.type); }
+	inline void type(const FileType type) { header.type = static_cast<uint8_t>(type); }
+
+	inline Version version() const { return header.version; }
+	inline void version(const Version version) { header.version = static_cast<uint16_t>(version); }
+
+	File()
+	{
+	}
+
+	File(Header header, Data data) : header(header), data(data)
 	{
 	}
 
@@ -89,51 +113,64 @@ public:
 		std::ofstream output(path, std::ios::binary);
 		if (!output.is_open())
 		{
-			throw std::runtime_error("Failed to open file for writing: " + path);
+			throw std::runtime_error("Failed to open file: " + path);
 		}
 
-		output.write(contents.magic, sizeof(contents.magic));
-		output.write(reinterpret_cast<const char *>(&contents.type), sizeof(contents.type));
-		output.write(reinterpret_cast<const char *>(&contents.version), sizeof(contents.version));
+		_write(output, header);
 
 		if (type() == FileType::NETWORK)
 		{
-			NeuralNetwork::Serialized net = data().network;
-			output.write(reinterpret_cast<const char *>(&net.id), sizeof(net.id));
-			size_t netSize = net.neurons.size();
-			output.write(reinterpret_cast<const char *>(&netSize), sizeof(netSize));
+			NeuralNetwork::Serialized net = data.network;
+			_write(output, net.id, net.neurons.size());
 			for (Neuron::Serialized &neuron : net.neurons)
 			{
-				output.write(reinterpret_cast<const char *>(&neuron.id), sizeof(neuron.id));
-				output.write(reinterpret_cast<const char *>(&neuron.type), sizeof(neuron.type));
+				_write(output, neuron.id, neuron.type, neuron.outputs.size());
 				for (NeuronConnection::Serialized &conn : neuron.outputs)
 				{
-					output << reinterpret_cast<const char *>(&conn);
+					_write(output, conn);
 				}
 			}
 		}
 		output.close();
 	}
 
-	static File Read(std::string path)
+	void read(std::string path)
 	{
-		std::ifstream input(path);
+		std::ifstream input(path, std::ios::binary);
 		if (!input.is_open())
 		{
 			throw std::runtime_error("Failed to open file: " + path);
 		}
 
-		const Contents contents = {};
-		input.read((char *)&contents, sizeof(contents));
+		_read(input, header);
+
+		if (type() == FileType::NETWORK)
+		{
+			NeuralNetwork::Serialized &net = data.network;
+			size_t netSize;
+			_read(input, net.id, netSize);
+			for (size_t n = 0; n < netSize; n++)
+			{
+				Neuron::Serialized neuron;
+				size_t outputsSize;
+				_read(input, neuron.id, neuron.type, outputsSize);
+				for(size_t o = 0; o < outputsSize; o++)
+				{
+					NeuronConnection::Serialized conn;
+					_read(input, conn);
+					neuron.outputs.push_back(conn);
+				}
+
+				net.neurons.push_back(neuron);
+			}
+		}
 		input.close();
 
-		std::string magic = contents.magic;
+		std::string magic = header.magic;
 		if (magic != Magic)
 		{
 			throw std::runtime_error("Invalid file (bad magic)");
 		}
-
-		return File(contents);
 	}
 
 	static constexpr char Magic[5] = "TPST";

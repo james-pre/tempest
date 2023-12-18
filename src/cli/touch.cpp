@@ -97,8 +97,7 @@ int main(int argc, char **argv)
 			network.addNeuron(neuron);
 		}
 		NeuralNetwork::Serialized netData(network.serialize());
-		File::Data data = File::Data(netData);
-		file.data(data);
+		file.data = File::Data(netData);
 	}
 
 	file.write(path);

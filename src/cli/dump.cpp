@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <ostream>
 #include <string>
 
 namespace opts = boost::program_options;
@@ -17,7 +18,8 @@ int main(int argc, char **argv)
 		("help,h", "Display help message")
 		("debug,d", "Show verbose/debug messages")
 		("output,o", opts::value<std::string>()->default_value("/proc/stdout"), "Output file (for applicable output formats)")
-		("format,f", opts::value<std::string>()->default_value("text"),"Output format")
+		("format,f", opts::value<std::string>()->default_value("text"), "Output format")
+		("detail,l", opts::value<unsigned char>()->default_value(2), "How much detail to output")
 		("input", opts::value<std::string>(), "Input file");
 	opts::positional_options_description pos_desc;
 	pos_desc.add("input", 1);
@@ -41,6 +43,7 @@ int main(int argc, char **argv)
 	const std::string path = vm["input"].as<std::string>();
 	const std::string output = vm["output"].as<std::string>();
 	const std::string format = vm["format"].as<std::string>();
+	const unsigned char detailLevel = vm["detail"].as<unsigned char>();
 	if (format != "text" && (output.empty() || output == "/proc/stdout"))
 	{
 		std::cerr << "No output file specified." << std::endl;
@@ -50,12 +53,13 @@ int main(int argc, char **argv)
 	{
 		std::cout << "Dump of " << path << ":\n";
 
-		const File file = File::Read(path);
+		File file;
+		file.read(path);
 
-		std::cout << "Header: \n\tmagic: " << file.magic() << "\n";
-		const unsigned char _type = file.contents.type;
+		std::cout << "Header: \nmagic: " << file.magic() << "\n";
+		const unsigned char _type = file.header.type;
 		const std::string type = (_type < maxFileType) ? fileTypes.at(_type) : "Unknown (" + std::to_string(_type) + ")";
-		std::cout << "\ttype: " << type << "\n\tversion: " << std::to_string(file.version()) << std::endl;
+		std::cout << "type: " << type << "\nversion: " << std::to_string(file.version()) << std::endl;
 
 		if (file.type() == FileType::NONE)
 		{
@@ -63,9 +67,8 @@ int main(int argc, char **argv)
 			return 0;
 		}
 
-		//std::streambuf * buf = (output == "/proc/stdout") ? std::cout.rdbuf() : std::ofstream(output).rdbuf();
-		std::ostream out((output == "/proc/stdout") ? std::cout.rdbuf() : std::ofstream(output).rdbuf());
-		File::Data data = file.data();
+		std::ostream &out = (output == "/proc/stdout") ? std::cout : *(new std::ofstream(output));
+		File::Data &data = file.data;
 
 		if (format == "gv" || format == "dot")
 		{
@@ -77,10 +80,13 @@ int main(int argc, char **argv)
 				break;
 			case FileType::NETWORK:
 				out << "digraph net_" << std::to_string(data.network.id) << " {\n";
-				for(Neuron::Serialized &neuron : data.network.neurons) {
+				for (Neuron::Serialized &neuron : data.network.neurons)
+				{
 					out << "\tn_" << std::to_string(neuron.id) << " -> {";
-					for(NeuronConnection::Serialized &conn : neuron.outputs) {
-						if(&conn != &neuron.outputs[0]) {
+					for (NeuronConnection::Serialized &conn : neuron.outputs)
+					{
+						if (&conn != &neuron.outputs[0])
+						{
 							out << ',';
 						}
 						out << std::to_string(conn.neuron);
@@ -98,27 +104,46 @@ int main(int argc, char **argv)
 		}
 
 		else if (format == "text")
-		{		
+		{
 
-			if (file.type() == FileType::NONE) {
+			if (file.type() == FileType::NONE)
+			{
 				out << "";
 			}
-			if (file.type() == FileType::NETWORK) {
-				out << "Network " << std::to_string(data.network.id) << " (" << std::to_string(data.network.neurons.size()) << " neurons):" << std::endl;
+			if (file.type() == FileType::NETWORK)
+			{
+				out << "Network " << data.network.id << " (" << data.network.neurons.size() << " neurons)" << (detailLevel > 0) << std::endl;
 				out.flush();
-				for(Neuron::Serialized &neuron : data.network.neurons) {
-					out << "\tNeuron " << std::to_string(neuron.id) << "(" << neuron.type << "," << neuron.outputs.size() << " outputs):\n";
-					for(NeuronConnection::Serialized &conn : neuron.outputs) {
-						out << "" << std::to_string(conn.neuron) << " (" << std::to_string(conn.strength) << ", " << std::to_string(conn.plasticityRate) << ", " << std::to_string(conn.plasticityThreshold) << ", " << std::to_string(conn.reliability) << ")";
+				for (Neuron::Serialized &neuron : data.network.neurons)
+				{
+					out << "\tNeuron " << neuron.id << " (";
+					out << (neuron.type < maxNeuronType) ? neuronTypes.at(neuron.type) : "Unknown Type (" + std::to_string(neuron.type) + ")";
+					out << ", " << neuron.outputs.size() << " outputs)" << (detailLevel > 1 && neuron.outputs.size() > 0 ? ": " : "");
+					if (detailLevel > 1)
+					{
+						for (NeuronConnection::Serialized &conn : neuron.outputs)
+						{
+							if (&conn != &neuron.outputs[0])
+							{
+								out << ',';
+							}
+							out << " " << conn.neuron;
+							if (detailLevel > 2)
+							{
+								out << " (" << conn.strength << "," << conn.plasticityRate << "," << conn.plasticityThreshold << "," << conn.reliability << ")";
+							}
+						}
 					}
+
 					out << '\n';
 				}
-				//delete[] _neurons;
 			}
-			if (file.type() == FileType::PARTIAL) {
+			if (file.type() == FileType::PARTIAL)
+			{
 				out << "Not supported" << std::endl;
 			}
-			if (file.type() == FileType::FULL) {
+			if (file.type() == FileType::FULL)
+			{
 				out << "Not supported" << std::endl;
 			}
 		}
@@ -130,7 +155,6 @@ int main(int argc, char **argv)
 
 		out.flush();
 		return 0;
-		
 	}
 	catch (std::exception &err)
 	{
