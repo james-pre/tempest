@@ -79,20 +79,21 @@ int main(int argc, char **argv)
 				out << "";
 				break;
 			case FileType::NETWORK:
-				out << "digraph net_" << std::to_string(data.network.id) << " {\n";
+				out << "digraph net_" << data.network.id << " {\n";
 				for (Neuron::Serialized &neuron : data.network.neurons)
 				{
-					out << "\tn_" << std::to_string(neuron.id) << " -> {";
+					out << "\tn_" << neuron.id << " -> {";
 					for (NeuronConnection::Serialized &conn : neuron.outputs)
 					{
 						if (&conn != &neuron.outputs[0])
 						{
 							out << ',';
 						}
-						out << std::to_string(conn.neuron);
+						out << "n_" << conn.neuron;
 					}
 					out << "}\n";
 				}
+				out << "}";
 				break;
 			case FileType::PARTIAL:
 				out << "Not supported" << std::endl;
@@ -118,7 +119,7 @@ int main(int argc, char **argv)
 				{
 					out << "\tNeuron " << neuron.id << " (";
 					out << (neuron.type < maxNeuronType) ? neuronTypes.at(neuron.type) : "Unknown Type (" + std::to_string(neuron.type) + ")";
-					out << ", " << neuron.outputs.size() << " outputs)" << (detailLevel > 1 && neuron.outputs.size() > 0 ? ": " : "");
+					out << ", " << neuron.outputs.size() << " outputs)" << (detailLevel > 1 && neuron.outputs.size() > 0 ? ":" : "");
 					if (detailLevel > 1)
 					{
 						for (NeuronConnection::Serialized &conn : neuron.outputs)

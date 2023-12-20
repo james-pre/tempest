@@ -1,0 +1,70 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Launch Debug",
+			"type": "cppdbg",
+			"request": "launch",
+			"program": "${workspaceFolder}/build/${fileBasenameNoExtension}",
+			"args": [],
+			"stopAtEntry": false,
+			"cwd": "${workspaceFolder}",
+			"environment": [],
+			"externalConsole": false,
+			"MIMode": "gdb",
+			"setupCommands": [
+				{
+					"description": "Enable pretty-printing for gdb",
+					"text": "-enable-pretty-printing",
+					"ignoreFailures": true
+				},
+				{
+                    "description": "Set arguments to debuggee",
+                    "text": "set args ${input:arguments}",
+                    "ignoreFailures": true
+                }
+			],
+			"preLaunchTask": "CMake: build",
+		}
+	],
+	"inputs": [
+		{
+			"id": "arguments",
+			"type": "pickString",
+			"description": "Arguments",
+			"default": "",
+			"options": [
+				{
+					"label": "Touch",
+					"value": "tmp/debug.lnn -t network -v 1 --debug-create 100"
+				},
+				{
+					"label": "Dump (text)",
+					"value": "tmp/debug.lnn -o tmp/debug.txt"
+				},
+				{
+					"label": "Dump (DOT)",
+					"value": "tmp/debug.lnn -o tmp/debug.dot -f dot"
+				},
+				{
+					"label": "Custom",
+					"value": "${command:extension.customArguments}"
+				}
+			]
+		}
+	],
+	"commands": [
+		{
+			"command": "extension.customArguments",
+			"title": "Enter custom arguments",
+			"inputs": [
+				{
+					"type": "promptString",
+					"id": "customArguments",
+					"description": "Custom Arguments",
+					"default": ""
+				}
+			]
+		}
+	]
+}

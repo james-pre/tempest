@@ -74,8 +74,8 @@ void Neuron::update()
 void Neuron::mutate()
 {
 	std::srand(static_cast<unsigned>(std::time(0)));
-	size_t id = std::rand() % network.size();
-	Neuron &neuron = network.neuron(id);
+	size_t targetID = std::rand() % network.size();
+	Neuron &neuron = network.neuron(targetID);
 	if (static_cast<float>(std::rand()) > 0.5)
 	{
 		connect(neuron);

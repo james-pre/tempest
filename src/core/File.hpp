@@ -166,8 +166,7 @@ public:
 		}
 		input.close();
 
-		std::string magic = header.magic;
-		if (magic != Magic)
+		if (magic() != Magic)
 		{
 			throw std::runtime_error("Invalid file (bad magic)");
 		}

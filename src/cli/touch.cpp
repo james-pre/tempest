@@ -90,11 +90,11 @@ int main(int argc, char **argv)
 		unsigned num_neurons = vm["debug-create"].as<unsigned>();
 		for(unsigned int i = 0; i < num_neurons; i++) {
 			Neuron neuron = Neuron(static_cast<NeuronType>(i % 4), network);
-			for(unsigned int j = 0; j < i % std::min(num_neurons, 6u); j++)
-			{
-				neuron.connect(network.neuron(i % std::max(j, 1u)));
-			}
 			network.addNeuron(neuron);
+			for(unsigned i = 0; i < 5; i++)
+			{
+				neuron.mutate();
+			}
 		}
 		NeuralNetwork::Serialized netData(network.serialize());
 		file.data = File::Data(netData);

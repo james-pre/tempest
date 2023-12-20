@@ -168,7 +168,7 @@ public:
 			id = size();
 		}
 
-		auto result = _neurons.insert(std::make_pair(id, std::move(neuron)));
+		auto result = _neurons.insert(std::make_pair(id, neuron));
 		if (!result.second)
 		{
 			throw std::runtime_error("Neuron with the same ID already exists");
