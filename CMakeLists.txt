@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.27)
 project(tempest VERSION 0.0.0)
 
 include(FetchContent)
