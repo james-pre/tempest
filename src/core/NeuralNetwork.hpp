@@ -72,6 +72,7 @@ private:
 	NeuronType _type;
 	std::vector<NeuronConnection> _outputs;
 	size_t _id;
+
 public:
 	NeuralNetwork &network;
 	Neuron(NeuronType neuronType, NeuralNetwork &network, size_t id = SIZE_MAX);
@@ -125,7 +126,7 @@ public:
 	Serialized serialize() const
 	{
 		std::vector<NeuronConnection::Serialized> outputsData;
-		for(const NeuronConnection &conn : outputs())
+		for (const NeuronConnection &conn : outputs())
 		{
 			outputsData.push_back(conn.serialize());
 		}
@@ -133,8 +134,7 @@ public:
 		return {
 			id(),
 			static_cast<uint16_t>(_type),
-			outputsData
-		};
+			outputsData};
 	}
 	static Neuron Deserialize(Serialized &data, NeuralNetwork &network);
 };
@@ -153,10 +153,11 @@ public:
 	Neuron &neuron(size_t id)
 	{
 		auto it = _neurons.find(id);
-		if(it == _neurons.end()) {
+		if (it == _neurons.end())
+		{
 			throw std::out_of_range("Invalid neuron ID");
 		}
-	
+
 		return it->second;
 	}
 
@@ -190,10 +191,11 @@ public:
 	void removeNeuron(size_t id)
 	{
 		auto it = _neurons.find(id);
-		if (it == _neurons.end()) {
+		if (it == _neurons.end())
+		{
 			throw std::out_of_range("Invalid neuron ID");
 		}
-		
+
 		_neurons.erase(it);
 	}
 
@@ -232,13 +234,12 @@ public:
 
 		return {
 			_id,
-			neuronsData
-		};
+			neuronsData};
 	}
 	static NeuralNetwork Deserialize(Serialized &data)
 	{
 		NeuralNetwork network(reluDefaultActivation, data.id);
-		for(Neuron::Serialized &neuronData : data.neurons)
+		for (Neuron::Serialized &neuronData : data.neurons)
 		{
 			Neuron neuron = Neuron::Deserialize(neuronData, network);
 			network.addNeuron(neuron);
