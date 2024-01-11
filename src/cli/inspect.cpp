@@ -84,7 +84,7 @@ std::string cmd_scope_change()
 	case FileType::FULL:
 		return "Environments not supported";
 	case FileType::NETWORK:
-		return "Changed scoped to \"" + scope + "\"" + (entering ? " (#" + std::to_string(target) + ")" : "");
+		return "Changed scope to \"" + scope + "\"" + (entering ? " (#" + std::to_string(target) + ")" : "");
 	}
 
 	return "Failed to change scope";
@@ -145,6 +145,10 @@ std::string cmd_list()
 		+ "\nneurons: " + std::to_string(network.neurons.size());
 	}
 
+	if(scopeValues["neuron"] >= network.neurons.size())
+	{
+		return "Neuron does not exist";
+	}
 	Neuron::Serialized neuron = network.neurons[scopeValues["neuron"]];
 	if(scope == "neuron")
 	{
@@ -156,6 +160,10 @@ std::string cmd_list()
 
 	if(scope == "connection")
 	{
+		if(scopeValues["connection"] >= neuron.outputs.size())
+		{
+			return "Connection does not exist";
+		}
 		NeuronConnection::Serialized conn = neuron.outputs[scopeValues["connection"]];
 		return "Inspecting connection to #" + std::to_string(conn.neuron) + ":"
 		+ "\nstrength: " + std::to_string(conn.strength)
