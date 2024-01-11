@@ -1,8 +1,10 @@
 #ifndef H_utils
 #define H_utils
 
+#include <vector>
+
 template <class element_t>
-element_t nextTo(std::vector<element_t> &vector, element_t &element, typename std::iterator_traits<typename std::vector<element_t>::iterator>::difference_type offset = 1)
+element_t nextTo(const std::vector<element_t> &vector, const element_t &element, const std::ptrdiff_t offset = 1)
 {
 	return *std::next(std::find(vector.begin(), vector.end(), element), offset);
 };
