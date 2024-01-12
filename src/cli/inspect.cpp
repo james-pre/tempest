@@ -61,9 +61,9 @@ int main(int argc, char **argv)
 		do
 		{
 			std::string raw_command;
-			std::string scope_path = inspector.scope_path();
+			std::string scope_path = inspector.scope.path();
 			std::cout << "["
-					  << inspector.scope
+					  << inspector.scope.active
 					  << (scope_path == "" ? "" : " #")
 					  << scope_path
 					  << "]? ";

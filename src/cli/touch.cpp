@@ -120,15 +120,13 @@ int main(int argc, char **argv)
 		unsigned num_neurons = options.at("neurons").as<unsigned>();
 		unsigned num_mutations = options.at("mutations").as<unsigned>();
 		for(unsigned i = 0; i < num_neurons; i++) {
-			Neuron neuron = Neuron(static_cast<NeuronType>(i % 4), network);
-			network.addNeuron(neuron);
+			Neuron &neuron = network.createNeuron(static_cast<NeuronType>(i % 4));
 			for(unsigned i = 0; i < num_mutations; i++)
 			{
 				neuron.mutate();
 			}
 		}
-		NeuralNetwork::Serialized netData(network.serialize());
-		file.data = File::Data(netData);
+		file.data = File::Data(network.serialize());
 	}
 
 	file.write(path);

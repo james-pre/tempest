@@ -12,8 +12,52 @@
 
 class Inspector
 {
-private:
+public:
+	class Scope
+	{
+	public:
+		std::string active = "top";
 
+		std::map<std::string, size_t> values{
+			{"top", 0},
+			{"environment", SIZE_MAX},
+			{"network", SIZE_MAX},
+			{"neuron", SIZE_MAX},
+			{"connection", SIZE_MAX},
+		};
+
+		void restore(Scope other)
+		{
+			active = other.active;
+			for(const std::string &scope : scopes)
+			{
+				values[scope] = other.values[scope];
+			}
+		}
+
+		void next(ptrdiff_t offset = 1, std::vector<std::string> skip = {})
+		{
+			active = nextTo(scopes, active, offset);
+			while(std::find(skip.begin(), skip.end(), active) != skip.end() && active != scopes.front() && active != scopes.back())
+			{
+				active = nextTo(scopes, active, offset);
+			}
+		}
+
+		std::string path() const
+		{
+			return std::accumulate(
+				std::next(scopes.begin()),
+				std::next(std::find(scopes.begin(), scopes.end(), active)),
+				std::string(""),
+				[&](const std::string a, const std::string b)
+				{
+					return values.at(b) != SIZE_MAX ? a + "/" + std::to_string(values.at(b)) : a;
+				});
+		}
+	};
+
+private:
 	std::string cmd_print() const
 	{
 
@@ -40,24 +84,20 @@ private:
 		bool entering = cmd[0] == "scope:enter" || cmd[0] == ">";
 		auto offset = entering ? 1 : -1;
 
-		scope = nextTo(scopes, scope, offset);
-		if (file.type() == FileType::NETWORK && scope == "environment")
-		{
-			scope = nextTo(scopes, scope, offset);
-		}
+		scope.next(offset, { file.type() ==  FileType::NETWORK ? "environment" : "" });
 
 		size_t target;
 		if (entering)
 		{
-			if(scope == "network" && file.type() == FileType::NETWORK && cmd[1] == "\%network")
+			if (scope.active == "network" && file.type() == FileType::NETWORK && cmd[1] == "\%")
 			{
 				target = file.data.network.id;
 			}
 			else
 			{
-				target = std::stol(cmd[1]);
+				target = std::stoul(cmd[1]);
 			}
-			scopeValues.at(scope) = target;
+			scope.values.at(scope.active) = target;
 		}
 		switch (file.type())
 		{
@@ -67,7 +107,7 @@ private:
 		case FileType::FULL:
 			return "Environments not supported";
 		case FileType::NETWORK:
-			return "Changed scope to \"" + scope + "\"" + (entering ? " (#" + std::to_string(target) + ")" : "");
+			return "Changed scope to \"" + scope.active + "\"" + (entering ? " (#" + std::to_string(target) + ")" : "");
 		}
 
 		return "Failed to change scope";
@@ -81,18 +121,31 @@ private:
 	std::string cmd_help() const
 	{
 		return R"(Inspector commands:
-	help, h				Display this help message
-	quit, q				Quit the inspector
-	print,p <symbol>	Print <symbol>
-	list,l				List info about the current scope target
-	scope:enter <id>	
-	scope:leave			
+	help,h				Display this help message
+	quit,q				Quit the inspector
+	info,i [symbol]		List info about the current scope target
+	scope:enter,> <scope>	
+	scope:leave,<		
 	)";
 	}
 
-	std::string cmd_list() const
+	std::string cmd_info()
 	{
-		if (scope == "top")
+		Scope scope_copy(scope);
+		bool scope_changed = false;
+
+		for (size_t i = 1; i < cmd.size(); i++)
+		{
+			if (i >= scopes.size())
+			{
+				break;
+			}
+
+			scope.next(1, { file.type() ==  FileType::NETWORK ? "environment" : "" });
+			scope.values[scope.active] = std::stoul(cmd[i]);
+			scope_changed = true;
+		}
+		if (scope.active == "top")
 		{
 			const std::string type = (file.header.type < maxFileType) ? fileTypes.at(file.header.type) : "Unknown (" + std::to_string(file.header.type) + ")";
 			std::string dataID = "<error>";
@@ -110,62 +163,75 @@ private:
 				break;
 			}
 
+			if (scope_changed) scope.restore(scope_copy);
 			return "Inspecting " + _path + ":" +
-			"\nmagic: " + file.magic() +
-			"\ntype: " + type +
-			"\nversion: " + std::to_string(file.version()) +
-			"\n\ndata: " + dataID;
+				   "\nmagic: " + file.magic() +
+				   "\ntype: " + type +
+				   "\nversion: " + std::to_string(file.version()) +
+				   "\n\ndata: " + dataID;
 		}
 
-		if (scope == "environment")
+		if (scope.active == "environment")
 		{
+			if (scope_changed) scope.restore(scope_copy);
 			return "Environments not supported";
 		}
 
-		if (scope == "network")
+		if (scope.active == "network")
 		{
-			return "Inspecting network #" + std::to_string(file.data.network.id) + ":" + "\nneurons: " + std::to_string(network.size());
+			if (scope_changed) scope.restore(scope_copy);
+			return "Inspecting network #" + std::to_string(file.data.network.id) + ":" +
+				   "\nneurons: " + std::to_string(network.size());
 		}
 
-		if (scopeValues.at("neuron") >= network.size())
+		if (scope.values.at("neuron") >= network.size())
 		{
+			if (scope_changed) scope.restore(scope_copy);
 			return "Neuron does not exist";
 		}
-		Neuron::Serialized neuron = file.data.network.neurons[scopeValues.at("neuron")];
-		if (scope == "neuron")
+		Neuron::Serialized neuron = file.data.network.neurons[scope.values.at("neuron")];
+		if (scope.active == "neuron")
 		{
+			if (scope_changed) scope.restore(scope_copy);
 			return "Inspecting neuron #" + std::to_string(neuron.id) + ":" +
-			"\ntype: " + neuronTypes[neuron.type] +
-			"\noutputs: " + std::to_string(neuron.outputs.size());
+				   "\ntype: " + neuronTypes[neuron.type] +
+				   "\noutputs: " + std::to_string(neuron.outputs.size());
 		}
 
-		if (scope == "connection")
+		if (scope.active == "connection")
 		{
-			if (scopeValues.at("connection") >= neuron.outputs.size())
+			if (scope.values.at("connection") >= neuron.outputs.size())
 			{
+				if (scope_changed) scope.restore(scope_copy);
 				return "Connection does not exist";
 			}
-			NeuronConnection::Serialized conn = neuron.outputs[scopeValues.at("connection")];
-			return "Inspecting connection to #" + std::to_string(conn.neuron) + ":" +
-			"\nstrength: " + std::to_string(conn.strength) +
-			"\nplasticityRate: " + std::to_string(conn.plasticityRate) +
-			"\nplasticityThreshold: " + std::to_string(conn.plasticityThreshold) +
-			"\nreliability: " + std::to_string(conn.reliability);
+			NeuronConnection::Serialized conn = neuron.outputs[scope.values.at("connection")];
+			if (scope_changed) scope.restore(scope_copy);
+			return "Inspecting connection #" + std::to_string(scope.values.at("connection")) + ":" +
+				   "\nto: #" + std::to_string(conn.neuron) +
+				   "\nstrength: " + std::to_string(conn.strength) +
+				   "\nplasticityRate: " + std::to_string(conn.plasticityRate) +
+				   "\nplasticityThreshold: " + std::to_string(conn.plasticityThreshold) +
+				   "\nreliability: " + std::to_string(conn.reliability);
 		}
 
+		if (scope_changed) scope.restore(scope_copy);
 		return "Invalid scope";
 	}
 
 	std::string cmd_mutate()
 	{
 		unsigned mutationCount;
-		try{
+		try
+		{
 			mutationCount = cmd.size() < 2 ? 1 : std::stoul(cmd[1]);
-		} catch (const std::exception &ex) {
+		}
+		catch (const std::exception &ex)
+		{
 			mutationCount = 1;
 		}
 		const auto &[env, net, neuron, conn] = targets();
-		if (scope == "top")
+		if (scope.active == "top")
 		{
 			switch (file.type())
 			{
@@ -175,32 +241,32 @@ private:
 			case FileType::FULL:
 				return "Environment mutation not supported";
 			case FileType::NETWORK:
-				for(unsigned i = 0; i < mutationCount; i++)
+				for (unsigned i = 0; i < mutationCount; i++)
 					net->mutate();
 				_updateFileData();
 				return "Mutated network #" + net->serialize().id;
 			}
 		}
 
-		if(scope == "network")
+		if (scope.active == "network")
 		{
-			for(unsigned i = 0; i < mutationCount; i++)
+			for (unsigned i = 0; i < mutationCount; i++)
 				net->mutate();
 			_updateFileData();
 			return "Mutated network";
 		}
 
-		if(scope == "neuron")
+		if (scope.active == "neuron")
 		{
-			for(unsigned i = 0; i < mutationCount; i++)
+			for (unsigned i = 0; i < mutationCount; i++)
 				neuron->mutate();
 			_updateFileData();
 			return "Mutated neuron";
 		}
 
-		if(scope == "connection")
+		if (scope.active == "connection")
 		{
-			for(unsigned i = 0; i < mutationCount; i++)
+			for (unsigned i = 0; i < mutationCount; i++)
 				conn->mutate();
 			_updateFileData();
 			return "Mutated connection";
@@ -209,33 +275,40 @@ private:
 		return "Invalid scope";
 	}
 
-	static const inline std::map<std::string, std::function<std::string(Inspector*)>> commands {
+	std::string cmd_write()
+	{
+		std::string file_path = cmd.size() < 2 ? _path : cmd.at(1);
+		file.write(file_path);
+		return "Wrote to " + file_path;
+	}
+
+	static const inline std::map<std::string, std::function<std::string(Inspector *)>> commands{
 		{"quit", &Inspector::cmd_quit},
 		{"q", &Inspector::cmd_quit},
 		{"help", &Inspector::cmd_help},
 		{"h", &Inspector::cmd_help},
-		{"print",&Inspector::cmd_print},
+		{"print", &Inspector::cmd_print},
 		{"p", &Inspector::cmd_print},
 		{"scope:enter", &Inspector::cmd_scope_change},
 		{">", &Inspector::cmd_scope_change},
 		{"scope:leave", &Inspector::cmd_scope_change},
 		{"<", &Inspector::cmd_scope_change},
-		{"list", &Inspector::cmd_list},
-		{"ls", &Inspector::cmd_list},
-		{"l", &Inspector::cmd_list},
+		{"info", &Inspector::cmd_info},
+		{"i", &Inspector::cmd_info},
 		{"mutate", &Inspector::cmd_mutate},
 		{"m", &Inspector::cmd_mutate},
+		{"write", &Inspector::cmd_write},
+		{"w", &Inspector::cmd_write},
 	};
 
-	std::tuple<Environment*, NeuralNetwork*, Neuron*, NeuronConnection*> targets()
+	std::tuple<Environment *, NeuralNetwork *, Neuron *, NeuronConnection *> targets()
 	{
-		Neuron* neuron = scopeValues.at("neuron") == SIZE_MAX ? nullptr : &(network.neuron(scopeValues.at("neuron")));
-		return
-		{
+		Neuron *neuron = scope.values.at("neuron") == SIZE_MAX ? nullptr : &(network.neuron(scope.values.at("neuron")));
+		return {
 			nullptr,
-			scopeValues.at("network") == SIZE_MAX ? nullptr : &network,
+			scope.values.at("network") == SIZE_MAX ? nullptr : &network,
 			neuron,
-			scopeValues.at("connection") == SIZE_MAX && neuron != nullptr ? nullptr : &(neuron->outputs.at(scopeValues.at("connection"))),
+			scope.values.at("connection") == SIZE_MAX || neuron == nullptr ? nullptr : &(neuron->outputs.at(scope.values.at("connection"))),
 		};
 	}
 
@@ -253,16 +326,7 @@ private:
 	NeuralNetwork network;
 
 public:
-
-	std::string scope = "top";
-
-	std::map<std::string, size_t> scopeValues{
-		{"top", 0},
-		{"environment", SIZE_MAX},
-		{"network", SIZE_MAX},
-		{"neuron", SIZE_MAX},
-		{"connection", SIZE_MAX},
-	};
+	Scope scope;
 
 	bool loaded() const
 	{
@@ -276,7 +340,7 @@ public:
 
 	void path(const std::string path)
 	{
-		if(_loaded)
+		if (_loaded)
 		{
 			throw std::runtime_error("Can not change path while file is loaded");
 		}
@@ -290,27 +354,27 @@ public:
 
 	void load()
 	{
-		if(_loaded)
+		if (_loaded)
 		{
 			throw std::runtime_error("Already loaded");
 		}
 
 		file.read(_path);
-		switch(file.type())
+		switch (file.type())
 		{
-			case FileType::NONE:
-			case FileType::FULL:
-			case FileType::PARTIAL:
-				break;
-			case FileType::NETWORK:
-				network = NeuralNetwork::Deserialize(file.data.network);
+		case FileType::NONE:
+		case FileType::FULL:
+		case FileType::PARTIAL:
+			break;
+		case FileType::NETWORK:
+			network = NeuralNetwork::Deserialize(file.data.network);
 		}
 		_loaded = true;
 	}
 
 	void unload()
 	{
-		if(!_loaded)
+		if (!_loaded)
 		{
 			throw std::runtime_error("Not loaded");
 		}
@@ -318,23 +382,11 @@ public:
 		_loaded = false;
 	}
 
-	std::string scope_path() const
-	{
-		return std::accumulate(
-			std::next(scopes.begin()),
-			std::next(std::find(scopes.begin(), scopes.end(), scope)),
-			std::string(""),
-			[&](const std::string a, const std::string b)
-			{
-				return scopeValues.at(b) != SIZE_MAX ? a + "/" + std::to_string(scopeValues.at(b)) : a;
-			});
-	}
-
 	std::string exec(std::string raw_command)
 	{
 		raw_cmd = raw_command;
 		boost::split(cmd, raw_command, boost::is_any_of(" "));
-		if(!commands.contains(cmd[0]))
+		if (!commands.contains(cmd[0]))
 		{
 			return "Command does not exist";
 		}

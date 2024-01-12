@@ -26,12 +26,10 @@ constexpr const int maxNeuronType = 4;
 
 constexpr std::array<const char *, maxNeuronType> neuronTypes = {"none", "transitional", "input", "output"};
 
-class Neuron;
-
 class NeuronConnection
 {
 public:
-	Neuron *neuron;				   // ref to connected neuron
+	size_t neuron;				   // ref to connected neuron
 	float strength = 1;			   // strength of the connection (>1: excitatory, <1: inhibitory)
 	float plasticityRate = 0;	   // how fast the strength changes
 	float plasticityThreshold = 1; // the max strength
@@ -46,14 +44,23 @@ public:
 		float reliability;
 	} __attribute__((packed));
 
-	Serialized serialize() const;
+	Serialized serialize() const
+	{
+		return Serialized{
+			neuron,
+			strength,
+			plasticityRate,
+			plasticityThreshold,
+			reliability,
+		};
+	}
 
 	void mutate();
 
-	static NeuronConnection Deserialize(Serialized &data, Neuron &neuron)
+	static NeuronConnection Deserialize(Serialized &data)
 	{
 		return NeuronConnection{
-			&neuron,
+			data.neuron,
 			data.strength,
 			data.plasticityRate,
 			data.plasticityThreshold,
@@ -71,7 +78,7 @@ class Neuron
 private:
 	NeuronType _type;
 	size_t _id;
-	
+
 public:
 	NeuralNetwork *network;
 
@@ -93,7 +100,7 @@ public:
 
 	NeuronConnection connect(Neuron &neuron)
 	{
-		NeuronConnection connection = {&neuron};
+		NeuronConnection connection = {neuron.id()};
 		addConnection(connection);
 		return connection;
 	}
@@ -101,7 +108,7 @@ public:
 	void unconnect(Neuron &neuron)
 	{
 		const auto it = std::find_if(outputs.begin(), outputs.end(), [&](NeuronConnection &conn)
-									 { return conn.neuron->id() == neuron.id(); });
+									 { return conn.neuron == neuron.id(); });
 
 		if (it == outputs.end())
 		{
@@ -166,18 +173,6 @@ public:
 	}
 
 	inline size_t size() const { return _neurons.size(); }
-	inline void addNeuron(Neuron &neuron, size_t id = SIZE_MAX)
-	{
-		if (id == SIZE_MAX)
-		{
-			id = size();
-		}
-		auto result = _neurons.insert(std::make_pair(id, neuron));
-		if (!result.second)
-		{
-			throw std::runtime_error("Neuron with the same ID already exists");
-		}
-	}
 
 	size_t idOf(const Neuron *neuron) const
 	{
@@ -189,6 +184,40 @@ public:
 			}
 		}
 		throw std::runtime_error("Neuron not found in network");
+	}
+
+	inline size_t addNeuron(Neuron &neuron, size_t id = SIZE_MAX)
+	{
+		if (id == SIZE_MAX)
+		{
+			id = size();
+		}
+		auto result = _neurons.insert(std::make_pair(id, neuron));
+		if (!result.second)
+		{
+			throw std::runtime_error("Neuron with the same ID already exists");
+		}
+		return id;
+	}
+
+	Neuron &createNeuron(NeuronType type)
+	{
+		Neuron _neuron(type, *this);
+		return neuron(addNeuron(_neuron));
+	}
+
+	bool hasNeuron(size_t id)
+	{
+		_update();
+		try
+		{
+			_neurons.at(id);
+			return true;
+		}
+		catch (const std::exception &e)
+		{
+			return false;
+		}
 	}
 
 	void removeNeuron(size_t id)
