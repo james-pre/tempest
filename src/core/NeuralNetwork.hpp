@@ -70,25 +70,25 @@ class Neuron
 {
 private:
 	NeuronType _type;
-	std::vector<NeuronConnection> _outputs;
 	size_t _id;
-
+	
 public:
-	NeuralNetwork &network;
+	NeuralNetwork *network;
+
 	Neuron(NeuronType neuronType, NeuralNetwork &network, size_t id = SIZE_MAX);
 
 	inline NeuronType type() const { return _type; }
-	inline const std::vector<NeuronConnection> outputs() const { return _outputs; }
+	std::vector<NeuronConnection> outputs;
 	size_t id() const;
 
 	void addConnection(NeuronConnection connection)
 	{
-		_outputs.push_back(connection);
+		outputs.push_back(connection);
 	}
 
 	void removeConnection(const NeuronConnection &connection)
 	{
-		std::remove(_outputs.begin(), _outputs.end(), connection);
+		std::remove(outputs.begin(), outputs.end(), connection);
 	}
 
 	NeuronConnection connect(Neuron &neuron)
@@ -100,10 +100,10 @@ public:
 
 	void unconnect(Neuron &neuron)
 	{
-		const auto it = std::find_if(_outputs.begin(), _outputs.end(), [&](NeuronConnection &conn)
+		const auto it = std::find_if(outputs.begin(), outputs.end(), [&](NeuronConnection &conn)
 									 { return conn.neuron->id() == neuron.id(); });
 
-		if (it == _outputs.end())
+		if (it == outputs.end())
 		{
 			throw std::runtime_error("Neuron is not connected");
 		}
@@ -126,7 +126,7 @@ public:
 	Serialized serialize() const
 	{
 		std::vector<NeuronConnection::Serialized> outputsData;
-		for (const NeuronConnection &conn : outputs())
+		for (const NeuronConnection &conn : outputs)
 		{
 			outputsData.push_back(conn.serialize());
 		}
@@ -145,6 +145,15 @@ private:
 	size_t _id;
 	std::map<size_t, Neuron> _neurons;
 
+	// fix neurons' pointers to this network
+	void _update()
+	{
+		for (auto &[id, neuron] : _neurons)
+		{
+			neuron.network = this;
+		}
+	}
+
 public:
 	NeuralNetwork(ActivationFunction activationFunction = reluDefaultActivation, size_t id = 0) : _id(id ? id : reinterpret_cast<std::uintptr_t>(&*this)), activationFunction(activationFunction) {}
 
@@ -152,13 +161,8 @@ public:
 
 	Neuron &neuron(size_t id)
 	{
-		auto it = _neurons.find(id);
-		if (it == _neurons.end())
-		{
-			throw std::out_of_range("Invalid neuron ID");
-		}
-
-		return it->second;
+		_update();
+		return _neurons.at(id);
 	}
 
 	inline size_t size() const { return _neurons.size(); }
@@ -168,7 +172,6 @@ public:
 		{
 			id = size();
 		}
-
 		auto result = _neurons.insert(std::make_pair(id, neuron));
 		if (!result.second)
 		{
@@ -202,10 +205,11 @@ public:
 	std::vector<Neuron> neuronsOfType(NeuronType type)
 	{
 		std::vector<Neuron> ofType;
-		for (const auto &[id, neuron] : _neurons)
+		for (auto &[id, neuron] : _neurons)
 		{
 			if (neuron.type() == type)
 			{
+				neuron.network = this;
 				ofType.push_back(neuron);
 			}
 		}
@@ -227,7 +231,7 @@ public:
 	{
 		std::vector<Neuron::Serialized> neuronsData;
 
-		for (const auto &[id, neuron] : _neurons)
+		for (auto &[id, neuron] : _neurons)
 		{
 			neuronsData.push_back(neuron.serialize());
 		}

@@ -41,11 +41,11 @@ void NeuronConnection::mutate()
 }
 
 Neuron::Neuron(NeuronType neuronType, NeuralNetwork &network, size_t id)
-		: _type(neuronType), _id(id != SIZE_MAX ? id : network.size()), network(network) {}
+		: _type(neuronType), _id(id != SIZE_MAX ? id : network.size()), network(&network) {}
 
 size_t Neuron::id() const
 {
-	return network.idOf(this);
+	return network->idOf(this);
 }
 
 Neuron Neuron::Deserialize(Neuron::Serialized &data, NeuralNetwork &network)
@@ -60,9 +60,9 @@ Neuron Neuron::Deserialize(Neuron::Serialized &data, NeuralNetwork &network)
 
 void Neuron::update()
 {
-	float activation = network.activationFunction(value);
+	float activation = network->activationFunction(value);
 
-	for (NeuronConnection &output : _outputs)
+	for (NeuronConnection &output : outputs)
 	{
 		float plasticityEffect = (std::abs(output.strength) > output.plasticityThreshold) ? output.plasticityRate : 1;
 		float outputEffect = activation * output.strength * plasticityEffect * output.reliability;
@@ -74,8 +74,8 @@ void Neuron::update()
 void Neuron::mutate()
 {
 	std::srand(static_cast<unsigned>(std::time(0)));
-	size_t targetID = std::rand() % network.size();
-	Neuron &neuron = network.neuron(targetID);
+	size_t targetID = std::rand() % network->size();
+	Neuron &neuron = network->neuron(targetID);
 	if (static_cast<float>(std::rand()) > 0.5)
 	{
 		connect(neuron);
@@ -97,6 +97,25 @@ void NeuralNetwork::update()
 
 void NeuralNetwork::mutate()
 {
+	std::srand(static_cast<unsigned>(std::time(0)));
+	
+	float rand = static_cast<float>(std::rand());
+
+	size_t target = std::rand() % size();
+	if (rand < .5)
+	{
+		neuron(target).mutate();
+		return;
+	}
+	
+	if(rand < 0.75)
+	{
+		removeNeuron(target);
+		return;
+	}
+
+	Neuron newNeuron(NeuronType::TRANSITIONAL, *this);
+	addNeuron(newNeuron);
 }
 
 std::vector<float> NeuralNetwork::processInput(std::vector<float> inputValues)

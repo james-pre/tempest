@@ -2,6 +2,7 @@
 #define H_Environment
 
 class Environment {
+	public:
 	struct Serialized {
 
 	};

@@ -2,6 +2,7 @@
 #define H_File
 
 #include <string>
+#include <cstring>
 #include <cstdint>
 #include <algorithm>
 #include <stdexcept>
@@ -92,7 +93,7 @@ public:
 	Data data;
 
 	inline const std::string magic() const { return std::string(header.magic); }
-	inline void magic(const std::string &magic) { std::copy(magic.begin(), magic.end(), header.magic); }
+	inline void magic(const std::string &magic) { strcpy(header.magic, magic.c_str()); }
 
 	inline FileType type() const { return static_cast<FileType>(header.type); }
 	inline void type(const FileType type) { header.type = static_cast<uint8_t>(type); }

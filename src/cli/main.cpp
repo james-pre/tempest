@@ -5,22 +5,22 @@
 #include "../core/metadata.hpp"
 #include "../core/NeuralNetwork.hpp"
 
-namespace opts = boost::program_options;
+namespace po = boost::program_options;
 
 int main(int argc, char **argv)
 {
 	// Command-line options
-	opts::options_description desc("Options");
+	po::options_description desc("Options");
 	desc.add_options()
 		("help,h", "Display help message")
 		("version,v", "Display version")
 		("debug,d", "Show verbose/debug messages")
 		("command", "Subcommand");
-	opts::positional_options_description pos_desc;
+	po::positional_options_description pos_desc;
 	pos_desc.add("command", 1);
-	opts::variables_map vm;
-	opts::store(opts::command_line_parser(argc, argv).options(desc).positional(pos_desc).run(), vm);
-	opts::notify(vm);
+	po::variables_map vm;
+	po::store(po::command_line_parser(argc, argv).options(desc).positional(pos_desc).run(), vm);
+	po::notify(vm);
 
 	if (vm.count("help"))
 	{
@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	std::string subcommand = vm["command"].as<std::string>();
+	std::string subcommand = vm.at("command").as<std::string>();
 
 	return 0;
 }

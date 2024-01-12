@@ -8,42 +8,43 @@
 #include <ostream>
 #include <string>
 
-namespace opts = boost::program_options;
+namespace po = boost::program_options;
 
 int main(int argc, char **argv)
 {
-	// Command-line options
-	opts::options_description desc("Options");
-	desc.add_options()
+	po::variables_map options;
+	po::options_description cli("Options");
+	cli.add_options()
 		("help,h", "Display help message")
 		("debug,d", "Show verbose/debug messages")
-		("output,o", opts::value<std::string>()->default_value("/proc/stdout"), "Output file (for applicable output formats)")
-		("format,f", opts::value<std::string>()->default_value("text"), "Output format")
-		("detail,l", opts::value<unsigned char>()->default_value(2), "How much detail to output")
-		("input", opts::value<std::string>(), "Input file");
-	opts::positional_options_description pos_desc;
-	pos_desc.add("input", 1);
-	opts::variables_map vm;
-	opts::store(opts::command_line_parser(argc, argv).options(desc).positional(pos_desc).run(), vm);
-	opts::notify(vm);
+		("output,o", po::value<std::string>()->default_value("/proc/stdout"), "Output file (for applicable output formats)")
+		("format,f", po::value<std::string>()->default_value("text"), "Output format")
+		("detail,l", po::value<unsigned char>()->default_value(2), "How much detail to output");
 
-	if (vm.count("help"))
+	po::options_description positionals("Options");
+	positionals.add_options()("input", po::value<std::string>(), "Input file");
+	po::positional_options_description _positionals;
+	_positionals.add("input", 1);
+	po::store(po::command_line_parser(argc, argv).options(po::options_description().add(cli).add(positionals)).positional(_positionals).run(), options);
+	po::notify(options);
+
+	if (options.count("help"))
 	{
 		std::cout << "Usage: <input>" << std::endl
-				  << desc << std::endl;
+				  << cli << std::endl;
 		return 0;
 	}
 
-	if (!vm.count("input"))
+	if (!options.count("input"))
 	{
 		std::cerr << "No input file specified." << std::endl;
 		return 1;
 	}
 
-	const std::string path = vm["input"].as<std::string>();
-	const std::string output = vm["output"].as<std::string>();
-	const std::string format = vm["format"].as<std::string>();
-	const unsigned char detailLevel = vm["detail"].as<unsigned char>();
+	const std::string path = options.at("input").as<std::string>();
+	const std::string output = options.at("output").as<std::string>();
+	const std::string format = options.at("format").as<std::string>();
+	const unsigned char detailLevel = options.at("detail").as<unsigned char>();
 	if (format != "text" && (output.empty() || output == "/proc/stdout"))
 	{
 		std::cerr << "No output file specified." << std::endl;
