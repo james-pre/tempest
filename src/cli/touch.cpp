@@ -15,32 +15,23 @@ int main(int argc, char **argv)
 	po::variables_map options;
 
 	po::options_description cli("Options");
-	cli.add_options()
-		("help,h", "Display help message")
-		("debug,d", "Show verbose/debug messages")
-		("force,f", "Overwrite files if they already exist")
-		("config,c", po::value<std::string>(), "Configuration file");
+	cli.add_options()("help,h", "Display help message")("debug,d", "Show verbose/debug messages")("force,f", "Overwrite files if they already exist")("config,c", po::value<std::string>(), "Configuration file");
 
 	po::options_description config("Configuration");
-	config.add_options()
-		("type,t", po::value<std::string>()->default_value("none"),"file type")
-		("version,v", po::value<unsigned int>()->default_value(0), "file version")
-		("neurons", po::value<unsigned int>()->default_value(0), "number of neurons to create per network")
-		("mutations", po::value<unsigned int>()->default_value(0), "number of mutations");
-		//("mutations-per-neuron", po::value<bool>()->default_value(true), "whether the number of mutations is per neuron (true) or per network (false)");
-
+	config.add_options()("type,t", po::value<std::string>()->default_value("none"), "file type")("version,v", po::value<unsigned int>()->default_value(0), "file version")("neurons", po::value<unsigned int>()->default_value(0), "number of neurons to create per network")("mutations", po::value<unsigned int>()->default_value(0), "number of mutations");
+	//("mutations-per-neuron", po::value<bool>()->default_value(true), "whether the number of mutations is per neuron (true) or per network (false)");
 
 	po::options_description _positionals;
 	_positionals.add_options()("output", po::value<std::string>());
 	po::positional_options_description positionals;
 	positionals.add("output", 1);
-	
+
 	po::store(po::command_line_parser(argc, argv).options(po::options_description().add(cli).add(config).add(_positionals)).positional(positionals).run(), options);
-	if(options.count("config"))
+	if (options.count("config"))
 	{
 		std::string config_path = options.at("config").as<std::string>();
 		std::ifstream config_file(config_path);
-		if(!config_file.is_open())
+		if (!config_file.is_open())
 		{
 			std::cout << "Failed to open configuration file \"" << config_path << "\", skipping.";
 		}
@@ -48,7 +39,6 @@ int main(int argc, char **argv)
 		{
 			po::store(po::parse_config_file(config_file, config), options);
 		}
-		
 	}
 	po::notify(options);
 
@@ -59,7 +49,7 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	if(!options.count("output"))
+	if (!options.count("output"))
 	{
 		std::cerr << "No output file specified." << std::endl;
 		return 1;
@@ -114,14 +104,19 @@ int main(int argc, char **argv)
 	File::Version version = options.at("version").as<File::Version>();
 	file.version(version);
 
-	if(type == FileType::NETWORK)
+	if (type == FileType::NETWORK)
 	{
 		NeuralNetwork network(0);
 		unsigned num_neurons = options.at("neurons").as<unsigned>();
 		unsigned num_mutations = options.at("mutations").as<unsigned>();
-		for(unsigned i = 0; i < num_neurons; i++) {
-			Neuron &neuron = network.createNeuron(static_cast<NeuronType>(i % 4));
-			for(unsigned i = 0; i < num_mutations; i++)
+		for (unsigned i = 0; i < num_neurons; i++)
+		{
+			network.createNeuron(static_cast<NeuronType>(i % 4));
+		}
+
+		for (auto &[id, neuron] : network._neurons)
+		{
+			for (unsigned i = 0; i < num_mutations; i++)
 			{
 				neuron.mutate();
 			}

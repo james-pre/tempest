@@ -1,16 +1,15 @@
-#include <ctime>
-#include <cstdlib>
 #include <cstring>
 #include <stdexcept>
+#include "utils.hpp"
 #include "NeuralNetwork.hpp"
 
 // Todo: This should be changed to properly account for the different attributes
 void NeuronConnection::mutate()
 {
-	std::srand(static_cast<unsigned>(std::time(0)));
-	float mutationStrength = static_cast<float>(std::rand()) / 2;
-	float newValue = static_cast<float>(std::rand()) - .5;
-	switch (std::rand() % 5)
+	
+	float mutationStrength = rand_seeded<float>() / 2;
+	float newValue = rand_seeded<float>() - .5;
+	switch (rand_seeded<int>() % 5)
 	{
 	case 0:
 		return;
@@ -63,11 +62,10 @@ void Neuron::update()
 
 void Neuron::mutate()
 {
-	std::srand(static_cast<unsigned>(std::time(0)));
-	unsigned _rand = static_cast<unsigned>(std::rand());
+	unsigned _rand = rand_seeded<unsigned>();
 	size_t targetID = _rand % network->size();
 	Neuron &neuron = network->neuron(targetID);
-	if (static_cast<float>(std::rand()) > 0.5)
+	if (rand_seeded<float>() > 0.5)
 	{
 		connect(neuron);
 	}
@@ -88,25 +86,23 @@ void NeuralNetwork::update()
 
 void NeuralNetwork::mutate()
 {
-	std::srand(static_cast<unsigned>(std::time(0)));
 	
-	float rand = ((float) std::rand() / (RAND_MAX));
+	float random = rand_seeded<float>();
 
-	size_t target = std::rand() % size();
-	if (rand < .6)
+	size_t target = rand_seeded<unsigned>() % _neurons.size();
+	if (random < .6)
 	{
 		neuron(target).mutate();
 		return;
 	}
 	
-	if(rand < 0.75 && hasNeuron(target))
+	if(random < 0.75 && hasNeuron(target))
 	{
 		removeNeuron(target);
 		return;
 	}
 
-	Neuron newNeuron(NeuronType::TRANSITIONAL, *this);
-	addNeuron(newNeuron);
+	createNeuron(NeuronType::TRANSITIONAL);
 }
 
 std::vector<float> NeuralNetwork::processInput(std::vector<float> inputValues)

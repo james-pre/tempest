@@ -150,7 +150,6 @@ class NeuralNetwork
 {
 private:
 	size_t _id;
-	std::map<size_t, Neuron> _neurons;
 
 	// fix neurons' pointers to this network
 	void _update()
@@ -165,6 +164,8 @@ public:
 	NeuralNetwork(ActivationFunction activationFunction = reluDefaultActivation, size_t id = 0) : _id(id ? id : reinterpret_cast<std::uintptr_t>(&*this)), activationFunction(activationFunction) {}
 
 	ActivationFunction activationFunction;
+
+	std::map<size_t, Neuron> _neurons;
 
 	Neuron &neuron(size_t id)
 	{
@@ -190,7 +191,11 @@ public:
 	{
 		if (id == SIZE_MAX)
 		{
-			id = size();
+			id = 0;
+			while(hasNeuron(id))
+			{
+				id++;
+			}
 		}
 		auto result = _neurons.insert(std::make_pair(id, neuron));
 		if (!result.second)
@@ -209,15 +214,7 @@ public:
 	bool hasNeuron(size_t id)
 	{
 		_update();
-		try
-		{
-			_neurons.at(id);
-			return true;
-		}
-		catch (const std::exception &e)
-		{
-			return false;
-		}
+		return _neurons.count(id);
 	}
 
 	void removeNeuron(size_t id)

@@ -242,9 +242,9 @@ private:
 				return "Environment mutation not supported";
 			case FileType::NETWORK:
 				for (unsigned i = 0; i < mutationCount; i++)
-					net->mutate();
+					network.mutate();
 				_updateFileData();
-				return "Mutated network #" + net->serialize().id;
+				return "Mutated network #" + file.data.network.id;
 			}
 		}
 
