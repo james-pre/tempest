@@ -1,6 +1,5 @@
 #include "../core/File.hpp"
 #include "../core/NeuralNetwork.hpp"
-#include "../core/metadata.hpp"
 #include <boost/program_options.hpp>
 #include <fstream>
 #include <iomanip>

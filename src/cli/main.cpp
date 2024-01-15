@@ -2,45 +2,47 @@
 #include <string>
 #include <fstream>
 #include <boost/program_options.hpp>
-#include "../core/metadata.hpp"
-#include "../core/NeuralNetwork.hpp"
 
 namespace po = boost::program_options;
+std::string project_name(PROJECT_NAME);
 
 int main(int argc, char **argv)
 {
 	// Command-line options
-	po::options_description desc("Options");
-	desc.add_options()
+	po::variables_map options;
+	po::options_description cli("Options");
+	cli.add_options()
 		("help,h", "Display help message")
-		("version,v", "Display version")
-		("debug,d", "Show verbose/debug messages")
-		("command", "Subcommand");
-	po::positional_options_description pos_desc;
-	pos_desc.add("command", 1);
-	po::variables_map vm;
-	po::store(po::command_line_parser(argc, argv).options(desc).positional(pos_desc).run(), vm);
-	po::notify(vm);
+		("version,v", "Display version");
+	po::options_description positionals;
+	positionals.add_options()
+		("command", "Subcommand")
+		("arguments", po::value<std::vector<std::string>>(), "Arguments");
+	po::positional_options_description _positionals;
+	_positionals.add("command", 1);
+	_positionals.add("arguments", -1);
+	po::store(po::command_line_parser(argc, argv).options(po::options_description().add(cli).add(positionals)).positional(_positionals).allow_unregistered().run(), options);
+	po::notify(options);
 
-	if (vm.count("help"))
+	if (options.count("version"))
 	{
-		std::cout << "Usage: \n" << desc << std::endl;
+		std::cout << VERSION << std::endl;
 		return 0;
 	}
 
-	if (vm.count("version"))
+	if (options.count("help") || !options.count("command"))
 	{
-		std::cout << version_name << std::endl;
+		std::cout << "Usage: " << project_name << " <subcommand> [options]\n" << cli << std::endl;
 		return 0;
 	}
 
-	if(!vm.count("command"))
-	{
-		std::cerr << "No subcommand specified." << std::endl;
-		return 1;
-	}
+	std::string subcommand = options.at("command").as<std::string>();
+	std::string command = project_name + "-" + subcommand;
 
-	std::string subcommand = vm.at("command").as<std::string>();
+    for (int i = 2; i < argc; i++)
+    {
+        command += " " + std::string(argv[i]);
+    }
 
-	return 0;
+	return system(command.c_str());
 }
