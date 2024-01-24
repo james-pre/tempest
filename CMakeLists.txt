@@ -3,12 +3,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(project "tempest")
 set(version "0.0.1")
 project(${project} VERSION ${version})
-include(FetchContent)
 add_compile_definitions(PROJECT_NAME="${project}" VERSION="${version}")
 
 set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Installation prefix")
-
-find_package(Boost REQUIRED COMPONENTS program_options)
 
 file(GLOB LIB_SOURCES src/core/*.hpp src/core/*.cpp)
 add_library(${project} SHARED ${LIB_SOURCES})
@@ -20,6 +17,7 @@ file(GLOB CLI_SOURCES src/cli/*.cpp)
 foreach(file ${CLI_SOURCES})
 	get_filename_component(name ${file} NAME_WE)
 	add_executable(${name} ${file})
+	find_package(Boost REQUIRED COMPONENTS program_options)
 	target_link_libraries(${name} ${project} Boost::program_options)
 
 	if(${name} STREQUAL "main")

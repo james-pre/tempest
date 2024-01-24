@@ -6,7 +6,7 @@
 // Todo: This should be changed to properly account for the different attributes
 void NeuronConnection::mutate()
 {
-	
+
 	float mutationStrength = rand_seeded<float>() / 2;
 	float newValue = rand_seeded<float>() - .5;
 	switch (rand_seeded<int>() % 5)
@@ -29,7 +29,9 @@ void NeuronConnection::mutate()
 }
 
 Neuron::Neuron(NeuronType neuronType, NeuralNetwork &network, size_t id)
-		: _type(neuronType), _id(id != SIZE_MAX ? id : network.size()), network(&network) {}
+	: _id(id != SIZE_MAX ? id : network.size()), network(&network), type(neuronType)
+{
+}
 
 size_t Neuron::id() const
 {
@@ -86,7 +88,7 @@ void NeuralNetwork::update()
 
 void NeuralNetwork::mutate()
 {
-	
+
 	float random = rand_seeded<float>();
 
 	size_t target = rand_seeded<unsigned>() % _neurons.size();
@@ -95,8 +97,8 @@ void NeuralNetwork::mutate()
 		neuron(target).mutate();
 		return;
 	}
-	
-	if(random < 0.75 && hasNeuron(target))
+
+	if (random < 0.75 && hasNeuron(target))
 	{
 		removeNeuron(target);
 		return;

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <map>
 #include <stdexcept>
+#include "utils.hpp"
 
 typedef std::function<float(float)> ActivationFunction;
 
@@ -28,12 +29,15 @@ constexpr std::array<const char *, maxNeuronType> neuronTypes = {"none", "transi
 
 class NeuronConnection
 {
+
 public:
 	size_t neuron;				   // ref to connected neuron
 	float strength = 1;			   // strength of the connection (>1: excitatory, <1: inhibitory)
 	float plasticityRate = 0;	   // how fast the strength changes
 	float plasticityThreshold = 1; // the max strength
 	float reliability = 1;		   // how reliable the passed value is
+
+	MAPABLE_MEMBERS(neuron, strength, plasticityRate, plasticityThreshold, reliability);
 
 	struct Serialized
 	{
@@ -76,15 +80,16 @@ class NeuralNetwork;
 class Neuron
 {
 private:
-	NeuronType _type;
 	size_t _id;
 
 public:
 	NeuralNetwork *network;
+	NeuronType type;
+
+	MAPABLE_MEMBERS(type, value)
 
 	Neuron(NeuronType neuronType, NeuralNetwork &network, size_t id = SIZE_MAX);
 
-	inline NeuronType type() const { return _type; }
 	std::vector<NeuronConnection> outputs;
 	size_t id() const;
 
@@ -140,7 +145,7 @@ public:
 
 		return {
 			id(),
-			static_cast<uint16_t>(_type),
+			static_cast<uint16_t>(type),
 			outputsData};
 	}
 	static Neuron Deserialize(Serialized &data, NeuralNetwork &network);
@@ -192,7 +197,7 @@ public:
 		if (id == SIZE_MAX)
 		{
 			id = 0;
-			while(hasNeuron(id))
+			while (hasNeuron(id))
 			{
 				id++;
 			}
@@ -233,7 +238,7 @@ public:
 		std::vector<Neuron> ofType;
 		for (auto &[id, neuron] : _neurons)
 		{
-			if (neuron.type() == type)
+			if (neuron.type == type)
 			{
 				neuron.network = this;
 				ofType.push_back(neuron);
