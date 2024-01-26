@@ -60,7 +60,7 @@ int main(int argc, char **argv)
 		do
 		{
 			std::string raw_command;
-			std::string scope_path = inspector.scope.path();
+			std::string scope_path = inspector.stringify_scope();
 			std::cout << "["
 					  << inspector.scope.active
 					  << (scope_path == "" ? "" : " #")
@@ -69,7 +69,7 @@ int main(int argc, char **argv)
 			std::getline(std::cin >> std::ws, raw_command);
 			std::cout << inspector.exec(raw_command) << std::endl;
 		}
-		while (inspector.command()[0] != "q" && inspector.command()[0] != "quit");
+		while (inspector.command() != "quit");
 		return 0;
 	}
 	catch (std::exception &err)

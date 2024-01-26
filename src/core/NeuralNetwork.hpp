@@ -184,9 +184,6 @@ public:
 		}
 	};
 
-private:
-	size_t _id;
-
 protected:
 	// fix neurons' pointers to this network
 	void _update()
@@ -203,6 +200,8 @@ public:
 
 	using std::map<size_t, Neuron>::size, std::map<size_t, Neuron>::begin, std::map<size_t, Neuron>::end;
 
+	size_t id;
+	std::string name;
 	std::string activation;
 
 	const Activation &activationFunction()
@@ -210,9 +209,9 @@ public:
 		return activations.at(activation);
 	}
 
-	REFLECT(activation)
+	REFLECT(name, activation)
 
-	NeuralNetwork(std::string activation = "relu", size_t id = 0) : _id(id ? id : reinterpret_cast<std::uintptr_t>(&*this)), activation(activation)
+	NeuralNetwork(std::string activation = "relu", std::string name = "", size_t id = SIZE_MAX) : id(id != SIZE_MAX ? id : reinterpret_cast<std::uintptr_t>(&*this)), name(!name.empty() ? name : std::to_string(this->id)), activation(activation)
 	{
 		if (!activations.contains(activation))
 		{
@@ -301,6 +300,7 @@ public:
 	struct Serialized
 	{
 		size_t id;
+		std::string name;
 		std::string activation;
 		std::vector<Neuron::Serialized> neurons;
 	};
@@ -314,11 +314,11 @@ public:
 			neuronsData.push_back(neuron.serialize());
 		}
 
-		return {_id, activation, neuronsData};
+		return {id, name, activation, neuronsData};
 	}
 	static NeuralNetwork Deserialize(Serialized &data)
 	{
-		NeuralNetwork network(data.activation, data.id);
+		NeuralNetwork network(data.activation, data.name, data.id);
 		for (Neuron::Serialized &neuronData : data.neurons)
 		{
 			Neuron neuron = Neuron::Deserialize(neuronData, network);

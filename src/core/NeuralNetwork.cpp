@@ -35,6 +35,10 @@ Neuron::Neuron(NeuronType neuronType, NeuralNetwork &network, size_t id)
 
 size_t Neuron::id() const
 {
+	if (network == nullptr)
+	{
+		throw new std::runtime_error("Invalid network");
+	}
 	return network->idOf(this);
 }
 

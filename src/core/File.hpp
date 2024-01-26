@@ -122,9 +122,7 @@ public:
 		if (type() == FileType::NETWORK)
 		{
 			NeuralNetwork::Serialized net = data.network;
-			_write(output, net.id, net.activation.size());
-			output.write(net.activation.data(), net.activation.size());
-			_write(output, net.neurons.size());
+			_write(output, net.id, net.name, net.activation, net.neurons.size());
 			for (Neuron::Serialized &neuron : net.neurons)
 			{
 				_write(output, neuron.id, neuron.type, neuron.outputs.size());
@@ -150,11 +148,8 @@ public:
 		if (type() == FileType::NETWORK)
 		{
 			NeuralNetwork::Serialized &net = data.network;
-			size_t netSize, activationSize;
-			_read(input, net.id, activationSize);
-			net.activation.resize(activationSize);
-			input.read(&net.activation[0], activationSize);
-			_read(input, netSize);
+			size_t netSize;
+			_read(input, net.id, net.name, net.activation, netSize);
 			for (size_t n = 0; n < netSize; n++)
 			{
 				Neuron::Serialized neuron;
@@ -180,5 +175,21 @@ public:
 
 	static constexpr char Magic[5] = "TPST";
 };
+
+template <>
+void File::_writeSingle(std::ostream &output, const std::string &string)
+{
+	_writeSingle(output, string.size());
+	output.write(string.data(), string.size());
+}
+
+template <>
+void File::_readSingle(std::istream &input, std::string &string)
+{
+	size_t size;
+	_readSingle(input, size);
+	string.resize(size);
+	input.read(&string[0], size);
+}
 
 #endif

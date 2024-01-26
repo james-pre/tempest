@@ -9,12 +9,30 @@
 #include "utils.hpp"
 #include "File.hpp"
 
+using namespace std::placeholders;
+
 class Inspector
 {
 public:
-	class Scope
+	class Scope : public std::map<std::string, size_t>
 	{
 	public:
+		using stringifier = std::function<std::string(std::string, size_t)>;
+
+		static std::string stringify_default([[maybe_unused]] const std::string &name, const size_t value)
+		{
+			return std::to_string(value);
+		}
+
+		using parser = std::function<size_t(std::string, std::string)>;
+
+		static size_t parse_default([[maybe_unused]] const std::string &name, const std::string &value)
+		{
+			return std::stoul(value);
+		}
+
+		using map = std::map<std::string, size_t>;
+
 		static const inline std::vector<std::string> scopes{
 			"top",
 			"environment",
@@ -23,26 +41,19 @@ public:
 			"connection",
 		};
 
+		static const inline std::string delimiter = "/";
+
 		std::string active = "top";
 
-		std::map<std::string, size_t> values{
-			{"top", 0},
-			{"environment", SIZE_MAX},
-			{"network", SIZE_MAX},
-			{"neuron", SIZE_MAX},
-			{"connection", SIZE_MAX},
-		};
-
-		std::string path() const
+		Scope(map values = {}) : map({
+									 {"top", 0},
+									 {"environment", SIZE_MAX},
+									 {"network", SIZE_MAX},
+									 {"neuron", SIZE_MAX},
+									 {"connection", SIZE_MAX},
+								 })
 		{
-			return std::accumulate(
-				std::next(scopes.begin()),
-				std::next(std::find(scopes.begin(), scopes.end(), active)),
-				std::string(""),
-				[&](const std::string a, const std::string b)
-				{
-					return values.at(b) != SIZE_MAX ? a + "/" + std::to_string(values.at(b)) : a;
-				});
+			from(values, true);
 		}
 
 		void restore(Scope other)
@@ -50,7 +61,7 @@ public:
 			active = other.active;
 			for (const std::string &scope : scopes)
 			{
-				values[scope] = other.values[scope];
+				(*this)[scope] = other[scope];
 			}
 		}
 
@@ -67,8 +78,57 @@ public:
 		{
 			for (const std::string &scope : scopes)
 			{
-				values[scope] = scope == "top" ? 0 : SIZE_MAX;
+				(*this)[scope] = scope == "top" ? 0 : SIZE_MAX;
 			}
+		}
+
+		void from(map new_values, bool partial = false)
+		{
+			for (const std::string &scope : scopes)
+			{
+				if (!new_values.contains(scope) && partial)
+				{
+					continue;
+				}
+				(*this)[scope] = new_values[scope];
+			}
+		}
+
+		std::string stringify(const stringifier &stringify = stringify_default) const
+		{
+			return std::accumulate(
+				std::next(scopes.begin()),
+				std::next(std::find(scopes.begin(), scopes.end(), active)),
+				std::string(""),
+				[&](const std::string a, const std::string b)
+				{
+					return at(b) == SIZE_MAX ? a : a + delimiter + stringify(b, at(b));
+				});
+		}
+
+		/*
+			Parses a scope path (e.g. a/b/c)
+			@param path The scope path
+			@param relative Whether to resolve the scope path starting from the active scope
+		*/
+		size_t parse(const std::string &path, bool relative = true, std::vector<std::string> skip = {}, const parser parse = parse_default)
+		{
+			std::vector<std::string> tokens = split(path, delimiter);
+			size_t offset = relative ? std::distance(scopes.begin(), std::find(scopes.begin(), scopes.end(), active)) : 0;
+			size_t end = std::min(offset + tokens.size(), scopes.size());
+			for (size_t i = offset; i < end; i++)
+			{
+				next(1, skip);
+				(*this)[active] = parse(active, tokens[i - offset]);
+			}
+			return tokens.size();
+		}
+
+		static Scope Parse(const std::string &path, bool relative = true, std::vector<std::string> skip = {}, const parser parse = parse_default)
+		{
+			Scope scope;
+			scope.parse(path, relative, skip, parse);
+			return scope;
 		}
 	};
 
@@ -88,34 +148,25 @@ public:
 private:
 	std::string cmd_scope_change()
 	{
-		if (!_loaded)
-		{
-			return "File not loaded";
-		}
-
-		if (file.magic() != File::Magic)
-		{
-			return "File invalid";
-		}
 
 		bool entering = cmdv[0] == "scope:enter";
-		auto offset = entering ? 1 : -1;
+		ptrdiff_t offset = -1;
 
-		scope.next(offset, {file.type() == FileType::NETWORK ? "environment" : ""});
+		std::vector<std::string> skip = {file.type() == FileType::NETWORK ? "environment" : ""};
 
-		size_t target;
 		if (entering)
 		{
-			if (scope.active == "network" && file.type() == FileType::NETWORK && cmdv[1] == "\%")
+			if (cmdv[1].empty())
 			{
-				target = file.data.network.id;
+				return "Missing deeper scope";
 			}
-			else
-			{
-				target = std::stoul(cmdv[1]);
-			}
-			scope.values.at(scope.active) = target;
+			offset = parse_scope(cmdv[1], true, skip);
 		}
+		else
+		{
+			scope.next(offset, skip);
+		}
+
 		switch (file.type())
 		{
 		case FileType::NONE:
@@ -124,7 +175,7 @@ private:
 		case FileType::FULL:
 			return "Environments not supported";
 		case FileType::NETWORK:
-			return "Changed scope to \"" + scope.active + "\"" + (entering ? " (#" + std::to_string(target) + ")" : "");
+			return "Changed scope to \"" + scope.active + "\"" + (entering ? " (#" + std::to_string(scope[scope.active]) + ")" : "");
 		}
 
 		return "Failed to change scope";
@@ -161,24 +212,24 @@ private:
 			}
 
 			scope.next(1, {file.type() == FileType::NETWORK ? "environment" : ""});
-			scope.values[scope.active] = std::stoul(cmdv[i]);
+			scope[scope.active] = std::stoul(cmdv[i]);
 			scope_changed = true;
 		}
 		if (scope.active == "top")
 		{
 			const std::string type = (file.header.type < maxFileType) ? fileTypes.at(file.header.type) : "Unknown (" + std::to_string(file.header.type) + ")";
-			std::string dataID = "<error>";
+			std::string data_text = "<error>";
 			switch (file.type())
 			{
 			case FileType::NONE:
-				dataID = "<none>";
+				data_text = "<none>";
 				break;
 			case FileType::PARTIAL:
 			case FileType::FULL:
-				dataID = "<not supported>";
+				data_text = "<not supported>";
 				break;
 			case FileType::NETWORK:
-				dataID = "#" + std::to_string(file.data.network.id);
+				data_text = file.data.network.name + " (#" + std::to_string(file.data.network.id) + ")";
 				break;
 			}
 
@@ -188,7 +239,7 @@ private:
 				   "\nmagic: " + file.magic() +
 				   "\ntype: " + type +
 				   "\nversion: " + std::to_string(file.version()) +
-				   "\n\ndata: " + dataID;
+				   "\n\ndata: " + data_text;
 		}
 
 		if (scope.active == "environment")
@@ -203,11 +254,12 @@ private:
 			if (scope_changed)
 				scope.restore(scope_copy);
 			return "Inspecting network #" + std::to_string(file.data.network.id) + ":" +
+				   "\nname: " + network.name +
 				   "\nactivation: " + network.activation +
 				   "\nneurons: " + std::to_string(network.size());
 		}
 
-		size_t neuron_id = scope.values.at("neuron");
+		size_t neuron_id = scope.at("neuron");
 		if (neuron_id >= network.size())
 		{
 			if (scope_changed)
@@ -226,7 +278,7 @@ private:
 
 		if (scope.active == "connection")
 		{
-			size_t conn_id = scope.values.at("connection");
+			size_t conn_id = scope.at("connection");
 			if (conn_id >= neuron.outputs.size())
 			{
 				if (scope_changed)
@@ -456,13 +508,33 @@ private:
 
 	std::tuple<Environment *, NeuralNetwork *, Neuron *, NeuronConnection *> targets()
 	{
-		Neuron *neuron = scope.values.at("neuron") == SIZE_MAX ? nullptr : &(network.neuron(scope.values.at("neuron")));
+		Neuron *neuron = scope.at("neuron") == SIZE_MAX ? nullptr : &(network.neuron(scope.at("neuron")));
 		return {
 			nullptr,
-			scope.values.at("network") == SIZE_MAX ? nullptr : &network,
+			scope.at("network") == SIZE_MAX ? nullptr : &network,
 			neuron,
-			scope.values.at("connection") == SIZE_MAX || neuron == nullptr ? nullptr : &(neuron->outputs.at(scope.values.at("connection"))),
+			scope.at("connection") == SIZE_MAX || neuron == nullptr ? nullptr : &(neuron->outputs.at(scope.at("connection"))),
 		};
+	}
+
+	std::string scope_stringifier(std::string name, size_t value) const
+	{
+		if (name == "network" && file.type() == FileType::NETWORK && file.data.network.id == value)
+		{
+			return file.data.network.name;
+		}
+
+		return Scope::stringify_default(name, value);
+	}
+
+	size_t scope_parser(std::string name, std::string value) const
+	{
+		if (name == "network" && file.type() == FileType::NETWORK && file.data.network.name == value)
+		{
+			return file.data.network.id;
+		}
+
+		return Scope::parse_default(name, value);
 	}
 
 	// update file data
@@ -500,9 +572,24 @@ public:
 		_path = path;
 	}
 
-	const std::vector<std::string> &command() const
+	const std::string &command() const
+	{
+		return cmdv[0];
+	}
+
+	const std::vector<std::string> &commandv() const
 	{
 		return cmdv;
+	}
+
+	size_t parse_scope(const std::string &path, bool relative = true, std::vector<std::string> skip = {})
+	{
+		return scope.parse(path, relative, skip, std::bind(&Inspector::scope_parser, this, _1, _2));
+	}
+
+	std::string stringify_scope()
+	{
+		return scope.stringify(std::bind(&Inspector::scope_stringifier, this, _1, _2));
 	}
 
 	void load()
@@ -542,6 +629,15 @@ public:
 
 	std::string exec(std::vector<std::string> command)
 	{
+		if (!_loaded)
+		{
+			return "File not loaded";
+		}
+
+		if (file.magic() != File::Magic)
+		{
+			return "File invalid";
+		}
 		cmdv = command;
 		for (const Command &cmd : commands)
 		{
