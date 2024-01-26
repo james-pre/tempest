@@ -14,22 +14,23 @@ namespace po = boost::program_options;
 int main(int argc, char **argv)
 {
 	// Command-line options
-	po::options_description desc("Options");
-	desc.add_options()
+	po::options_description cli("Options");
+	cli.add_options()
 		("help,h", "Display help message")
-		("debug,d", "Show verbose/debug messages")
-		("input", po::value<std::string>(), "Input file")
-		("noload", "Do not automatically load the input file");
-	po::positional_options_description pos_desc;
-	pos_desc.add("input", 1);
-	po::variables_map vm;
-	po::store(po::command_line_parser(argc, argv).options(desc).positional(pos_desc).run(), vm);
-	po::notify(vm);
+		("debug", "Show verbose/debug messages")
+		("no-load", "Do not automatically load the input file");
+	po::options_description _positionals;
+	_positionals.add_options()("input", po::value<std::string>()->value_name("path"), "Input file");
+	po::positional_options_description positionals;
+	positionals.add("input", 1);
+	po::variables_map options;
+	po::store(po::command_line_parser(argc, argv).options(po::options_description().add(cli).add(_positionals)).positional(positionals).run(), options);
+	po::notify(options);
 
-	if (vm.count("help"))
+	if (options.count("help"))
 	{
-		std::cout << "Usage: [input]" << std::endl
-				  << desc << std::endl;
+		std::cout << "Usage: [input] [options]" << std::endl
+				  << cli << std::endl;
 		return 0;
 	}
 
@@ -37,9 +38,9 @@ int main(int argc, char **argv)
 
 	std::string path;
 	
-	if (vm.count("input"))
+	if (options.count("input"))
 	{
-		path = vm.at("input").as<std::string>();
+		path = options.at("input").as<std::string>();
 	}
 	else
 	{
@@ -51,7 +52,7 @@ int main(int argc, char **argv)
 
 	try
 	{
-		if (!vm.count("noload"))
+		if (!options.count("no-load"))
 		{
 			inspector.load();
 		}
@@ -75,7 +76,7 @@ int main(int argc, char **argv)
 	catch (std::exception &err)
 	{
 		std::cerr << err.what() << std::endl;
-		if (vm.count("debug"))
+		if (options.count("debug"))
 		{
 			throw err;
 		}

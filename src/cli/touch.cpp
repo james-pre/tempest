@@ -16,18 +16,18 @@ int main(int argc, char **argv)
 	po::options_description cli("Options");
 	cli.add_options()
 		("help,h", "Display help message")
-		("debug,d", "Show verbose/debug messages")
+		("debug", "Show verbose/debug messages")
 		("force,f", "Overwrite files if they already exist")
-		("config,c", po::value<std::string>(), "Configuration file");
+		("config,c", po::value<std::string>()->value_name("path"), "Configuration file");
 
 	po::options_description config("Configuration");
 	config.add_options()
-		("type,t", po::value<std::string>()->default_value("none"), "file type")
-		("version,v", po::value<unsigned int>()->default_value(0), "file version")
-		("neurons", po::value<unsigned int>()->default_value(0), "number of neurons to create per network")
-		("inputs", po::value<unsigned int>()->default_value(0), "number of input neurons")
-		("outputs", po::value<unsigned int>()->default_value(0), "number of output neurons")
-		("mutations", po::value<unsigned int>()->default_value(0), "number of mutations");
+		("type,t", po::value<std::string>()->value_name("type")->default_value("none"), "file type")
+		("version,v", po::value<unsigned int>()->value_name("version")->default_value(0), "file version")
+		("neurons,n", po::value<unsigned int>()->value_name("num")->default_value(0), "number of neurons to create per network")
+		("inputs,i", po::value<unsigned int>()->value_name("num")->default_value(0), "number of input neurons")
+		("outputs,o", po::value<unsigned int>()->value_name("num")->default_value(0), "number of output neurons")
+		("mutations,m", po::value<unsigned int>()->value_name("num")->default_value(0), "number of mutations");
 	
 	po::options_description _positionals;
 	_positionals.add_options()("output", po::value<std::string>());
@@ -52,8 +52,8 @@ int main(int argc, char **argv)
 
 	if (options.count("help"))
 	{
-		std::cout << "Usage: <output>" << std::endl
-				  << cli << std::endl;
+		std::cout << "Usage: <output> [options]" << std::endl
+				  << cli << config << std::endl;
 		return 0;
 	}
 

@@ -15,10 +15,10 @@ int main(int argc, char **argv)
 	po::options_description cli("Options");
 	cli.add_options()
 		("help,h", "Display help message")
-		("debug,d", "Show verbose/debug messages")
-		("output,o", po::value<std::string>()->default_value("/proc/stdout"), "Output file (for applicable output formats)")
-		("format,f", po::value<std::string>()->default_value("text"), "Output format")
-		("detail,l", po::value<unsigned char>()->default_value(2), "How much detail to output");
+		("debug", "Show verbose/debug messages")
+		("output,o", po::value<std::string>()->default_value("")->value_name("path"), "Output file")
+		("format,f", po::value<std::string>()->default_value("text")->value_name("format"), "Output format")
+		("detail,d", po::value<unsigned char>()->default_value(2)->value_name("level"), "How much detail to output");
 
 	po::options_description positionals("Options");
 	positionals.add_options()("input", po::value<std::string>(), "Input file");
@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 
 	if (options.count("help"))
 	{
-		std::cout << "Usage: <input>" << std::endl
+		std::cout << "Usage: <input> [options]" << std::endl
 				  << cli << std::endl;
 		return 0;
 	}
@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 			return 0;
 		}
 
-		std::ostream &out = (output == "/proc/stdout") ? std::cout : *(new std::ofstream(output));
+		std::ostream &out = output.empty() ? std::cout : *(new std::ofstream(output));
 		File::Data &data = file.data;
 
 		if (format == "gv" || format == "dot")
