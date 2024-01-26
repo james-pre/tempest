@@ -86,17 +86,6 @@ public:
 	};
 
 private:
-	std::string cmd_print() const
-	{
-
-		if (cmdv[1] == ".")
-		{
-			return "";
-		}
-
-		return "Symbol can not be printed";
-	}
-
 	std::string cmd_scope_change()
 	{
 		if (!_loaded)
@@ -218,13 +207,14 @@ private:
 				   "\nneurons: " + std::to_string(network.size());
 		}
 
-		if (scope.values.at("neuron") >= network.size())
+		size_t neuron_id = scope.values.at("neuron");
+		if (neuron_id >= network.size())
 		{
 			if (scope_changed)
 				scope.restore(scope_copy);
 			return "Neuron does not exist";
 		}
-		Neuron::Serialized neuron = file.data.network.neurons[scope.values.at("neuron")];
+		Neuron::Serialized neuron = file.data.network.neurons[neuron_id];
 		if (scope.active == "neuron")
 		{
 			if (scope_changed)
@@ -236,16 +226,17 @@ private:
 
 		if (scope.active == "connection")
 		{
-			if (scope.values.at("connection") >= neuron.outputs.size())
+			size_t conn_id = scope.values.at("connection");
+			if (conn_id >= neuron.outputs.size())
 			{
 				if (scope_changed)
 					scope.restore(scope_copy);
 				return "Connection does not exist";
 			}
-			NeuronConnection::Serialized conn = neuron.outputs[scope.values.at("connection")];
+			NeuronConnection::Serialized conn = neuron.outputs[conn_id];
 			if (scope_changed)
 				scope.restore(scope_copy);
-			return "Inspecting connection #" + std::to_string(scope.values.at("connection")) + ":" +
+			return "Inspecting connection #" + std::to_string(conn_id) + ":" +
 				   "\nto: #" + std::to_string(conn.neuron) +
 				   "\nstrength: " + std::to_string(conn.strength) +
 				   "\nplasticityRate: " + std::to_string(conn.plasticityRate) +
@@ -390,34 +381,37 @@ private:
 		return "Invalid scope";
 	}
 
-	std::string cmd_set()
+	std::string cmd_data()
 	{
-		if (cmdv.size() < 3)
+		if (cmdv.size() < (cmdv[0] == "data:set" ? 3 : 2))
 		{
 			return "Missing arguments";
 		}
 		const auto &[env, net, neuron, conn] = targets();
+		Reflectable *target = nullptr;
+
 		if (scope.active == "top")
 		{
 			switch (file.type())
 			{
 			case FileType::NONE:
-				return "Nothing to modify";
+				return "No data to " + std::string(cmdv[0] == "data:set" ? "modify" : "interact with");
 			case FileType::PARTIAL:
 			case FileType::FULL:
-				return "Environment modification not supported";
+				return "Environment " + std::string(cmdv[0] == "data:set" ? "modification" : "data interaction") + " not supported";
 			case FileType::NETWORK:
-				return "Network modification not supported";
+				target = static_cast<Reflectable *>(net);
 			}
 		}
 
 		if (scope.active == "environment")
-		{
-			return "Environment modification not supported";
-		}
-
-		Reflectable *target = scope.active == "network" ? static_cast<Reflectable *>(net) : scope.active == "neuron" ? static_cast<Reflectable *>(neuron)
-																														   : static_cast<Reflectable *>(conn);
+			return "Environment " + std::string(cmdv[0] == "data:set" ? "modification" : "data interaction") + " not supported";
+		if (scope.active == "network")
+			target = static_cast<Reflectable *>(net);
+		if (scope.active == "neuron")
+			target = static_cast<Reflectable *>(neuron);
+		if (scope.active == "connection")
+			target = static_cast<Reflectable *>(conn);
 
 		if (target == nullptr)
 		{
@@ -427,6 +421,11 @@ private:
 		if (!target->has(cmdv[1]))
 		{
 			return "Property \"" + cmdv[1] + "\" does not exist";
+		}
+
+		if (cmdv[0] == "data:get")
+		{
+			return cmdv[1] + " = " + target->get_string(cmdv[1]);
 		}
 
 		try
@@ -444,7 +443,6 @@ private:
 	static const inline std::vector<Command> commands = {
 		{"quit", {"q", "exit"}, "Quits the inspector", &Inspector::cmd_quit},
 		{"help", {"h"}, "Displays this help message or the description of a command", &Inspector::cmd_help},
-		{"print", {"p"}, "(ununsed)", &Inspector::cmd_print},
 		{"scope:enter", {">"}, "Enter a deeper scope", &Inspector::cmd_scope_change},
 		{"scope:leave", {"<"}, "Leave a deeper scope", &Inspector::cmd_scope_change},
 		{"scope:reset", {}, "Reset scopes", &Inspector::cmd_scope_reset},
@@ -452,7 +450,8 @@ private:
 		{"mutate", {"m"}, "Mutate the current object", &Inspector::cmd_mutate},
 		{"write", {"w"}, "Write changes made to the file to disk", &Inspector::cmd_write},
 		{"create", {"c"}, "Create a new child object of the current object", &Inspector::cmd_create},
-		{"set", {"s"}, "Set a value on the current object", &Inspector::cmd_set},
+		{"data:set", {"set", "s"}, "Set a value on the current object", &Inspector::cmd_data},
+		{"data:get", {"get", "g", "print", "p"}, "Get a value on the current object", &Inspector::cmd_data},
 	};
 
 	std::tuple<Environment *, NeuralNetwork *, Neuron *, NeuronConnection *> targets()

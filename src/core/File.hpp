@@ -160,7 +160,7 @@ public:
 				Neuron::Serialized neuron;
 				size_t outputsSize;
 				_read(input, neuron.id, neuron.type, outputsSize);
-				for(size_t o = 0; o < outputsSize; o++)
+				for (size_t o = 0; o < outputsSize; o++)
 				{
 					NeuronConnection::Serialized conn;
 					_read(input, conn);
