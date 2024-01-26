@@ -14,12 +14,21 @@ int main(int argc, char **argv)
 	po::variables_map options;
 
 	po::options_description cli("Options");
-	cli.add_options()("help,h", "Display help message")("debug,d", "Show verbose/debug messages")("force,f", "Overwrite files if they already exist")("config,c", po::value<std::string>(), "Configuration file");
+	cli.add_options()
+		("help,h", "Display help message")
+		("debug,d", "Show verbose/debug messages")
+		("force,f", "Overwrite files if they already exist")
+		("config,c", po::value<std::string>(), "Configuration file");
 
 	po::options_description config("Configuration");
-	config.add_options()("type,t", po::value<std::string>()->default_value("none"), "file type")("version,v", po::value<unsigned int>()->default_value(0), "file version")("neurons", po::value<unsigned int>()->default_value(0), "number of neurons to create per network")("mutations", po::value<unsigned int>()->default_value(0), "number of mutations");
-	//("mutations-per-neuron", po::value<bool>()->default_value(true), "whether the number of mutations is per neuron (true) or per network (false)");
-
+	config.add_options()
+		("type,t", po::value<std::string>()->default_value("none"), "file type")
+		("version,v", po::value<unsigned int>()->default_value(0), "file version")
+		("neurons", po::value<unsigned int>()->default_value(0), "number of neurons to create per network")
+		("inputs", po::value<unsigned int>()->default_value(0), "number of input neurons")
+		("outputs", po::value<unsigned int>()->default_value(0), "number of output neurons")
+		("mutations", po::value<unsigned int>()->default_value(0), "number of mutations");
+	
 	po::options_description _positionals;
 	_positionals.add_options()("output", po::value<std::string>());
 	po::positional_options_description positionals;
@@ -105,15 +114,23 @@ int main(int argc, char **argv)
 
 	if (type == FileType::NETWORK)
 	{
-		NeuralNetwork network(0);
-		unsigned num_neurons = options.at("neurons").as<unsigned>();
-		unsigned num_mutations = options.at("mutations").as<unsigned>();
+		NeuralNetwork network;
+		const unsigned num_neurons = options.at("neurons").as<unsigned>();
+		const unsigned num_mutations = options.at("mutations").as<unsigned>();
+		const unsigned num_inputs = options.at("inputs").as<unsigned>();
+		const unsigned num_outputs = options.at("outputs").as<unsigned>();
+		if(num_neurons < num_inputs + num_outputs)
+		{
+			std::cerr << "The number of input and output neurons exceeds the number of total neurons in the network." << std::endl;
+			return 1;
+		}
 		for (unsigned i = 0; i < num_neurons; i++)
 		{
-			network.createNeuron(static_cast<NeuronType>(i % 4));
+			NeuronType type = i < num_inputs ? NeuronType::INPUT : (i >= num_neurons - num_outputs ? NeuronType::OUTPUT : NeuronType::TRANSITIONAL);
+			network.createNeuron(type);
 		}
 
-		for (auto &[id, neuron] : network._neurons)
+		for (auto &[id, neuron] : network)
 		{
 			for (unsigned i = 0; i < num_mutations; i++)
 			{

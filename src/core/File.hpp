@@ -122,7 +122,9 @@ public:
 		if (type() == FileType::NETWORK)
 		{
 			NeuralNetwork::Serialized net = data.network;
-			_write(output, net.id, net.neurons.size());
+			_write(output, net.id, net.activation.size());
+			output.write(net.activation.data(), net.activation.size());
+			_write(output, net.neurons.size());
 			for (Neuron::Serialized &neuron : net.neurons)
 			{
 				_write(output, neuron.id, neuron.type, neuron.outputs.size());
@@ -148,8 +150,11 @@ public:
 		if (type() == FileType::NETWORK)
 		{
 			NeuralNetwork::Serialized &net = data.network;
-			size_t netSize;
-			_read(input, net.id, netSize);
+			size_t netSize, activationSize;
+			_read(input, net.id, activationSize);
+			net.activation.resize(activationSize);
+			input.read(&net.activation[0], activationSize);
+			_read(input, netSize);
 			for (size_t n = 0; n < netSize; n++)
 			{
 				Neuron::Serialized neuron;

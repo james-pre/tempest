@@ -50,7 +50,7 @@ Neuron Neuron::Deserialize(Neuron::Serialized &data, NeuralNetwork &network)
 
 void Neuron::update()
 {
-	float activation = network->activationFunction(value);
+	float activation = network->activationFunction()(value);
 
 	for (NeuronConnection &output : outputs)
 	{
@@ -67,6 +67,11 @@ void Neuron::mutate()
 	unsigned _rand = rand_seeded<unsigned>();
 	size_t targetID = _rand % network->size();
 	Neuron &neuron = network->neuron(targetID);
+	if (type == NeuronType::OUTPUT || neuron.type == NeuronType::INPUT)
+	{
+		return;
+	}
+
 	if (rand_seeded<float>() > 0.5)
 	{
 		connect(neuron);
@@ -91,7 +96,7 @@ void NeuralNetwork::mutate()
 
 	float random = rand_seeded<float>();
 
-	size_t target = rand_seeded<unsigned>() % _neurons.size();
+	size_t target = rand_seeded<unsigned>() % size();
 	if (random < .6)
 	{
 		neuron(target).mutate();

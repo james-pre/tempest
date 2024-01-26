@@ -214,6 +214,7 @@ private:
 			if (scope_changed)
 				scope.restore(scope_copy);
 			return "Inspecting network #" + std::to_string(file.data.network.id) + ":" +
+				   "\nactivation: " + network.activation +
 				   "\nneurons: " + std::to_string(network.size());
 		}
 
@@ -410,53 +411,34 @@ private:
 			}
 		}
 
-		if (scope.active == "network")
+		if (scope.active == "environment")
 		{
-			if (net == nullptr)
-			{
-				return "No active network";
-			}
+			return "Environment modification not supported";
+		}
 
-			if (cmdv[1] == "")
-			{
-			}
+		Reflectable *target = scope.active == "network" ? static_cast<Reflectable *>(net) : scope.active == "neuron" ? static_cast<Reflectable *>(neuron)
+																														   : static_cast<Reflectable *>(conn);
+
+		if (target == nullptr)
+		{
+			return "No active " + scope.active;
+		}
+
+		if (!target->has(cmdv[1]))
+		{
+			return "Property \"" + cmdv[1] + "\" does not exist";
+		}
+
+		try
+		{
+			target->set(cmdv[1], cmdv[2]);
 			_update();
-			return "";
 		}
-		if (neuron == nullptr)
+		catch (const std::exception &ex)
 		{
-			return "No active neuron";
+			return "Failed to set \"" + cmdv[1] + "\": " + ex.what();
 		}
-		if (scope.active == "neuron")
-		{
-			if (cmdv.size() < 2)
-			{
-				return "No output neuron specified";
-			}
-			size_t output;
-			try
-			{
-				output = std::stoul(cmdv[1]);
-			}
-			catch (const std::exception &ex)
-			{
-				return "Invalid output";
-			}
-			if (!net->hasNeuron(output))
-			{
-				return "Specified output neuron does not exist";
-			}
-			neuron->connect(net->neuron(output));
-			_update();
-			return "Created connection";
-		}
-
-		if (scope.active == "connection")
-		{
-			return "Nothing to create";
-		}
-
-		return "Invalid scope";
+		return "Set \"" + cmdv[1] + "\" to \"" + target->get_string(cmdv[1]) + "\"";
 	}
 
 	static const inline std::vector<Command> commands = {

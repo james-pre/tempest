@@ -8,13 +8,6 @@
 #include <stdexcept>
 #include "utils.hpp"
 
-typedef std::function<float(float)> ActivationFunction;
-
-inline float reluDefaultActivation(float x)
-{
-	return (x > 0) ? x : 0;
-}
-
 enum class NeuronType
 {
 	NONE,
@@ -23,11 +16,23 @@ enum class NeuronType
 	OUTPUT,
 };
 
+namespace std
+{
+	string to_string(string &val)
+	{
+		return val;
+	}
+	string to_string(NeuronType val)
+	{
+		return to_string(static_cast<unsigned int>(val));
+	}
+}
+
 constexpr const int maxNeuronType = 4;
 
 constexpr std::array<const char *, maxNeuronType> neuronTypes = {"none", "transitional", "input", "output"};
 
-class NeuronConnection
+class NeuronConnection : public Reflectable
 {
 
 public:
@@ -37,7 +42,20 @@ public:
 	float plasticityThreshold = 1; // the max strength
 	float reliability = 1;		   // how reliable the passed value is
 
-	MAPABLE_MEMBERS(neuron, strength, plasticityRate, plasticityThreshold, reliability);
+	REFLECT(neuron, strength, plasticityRate, plasticityThreshold, reliability);
+
+	NeuronConnection(
+		size_t neuron,
+		float strength = 1,
+		float plasticityRate = 0,
+		float plasticityThreshold = 1,
+		float reliability = 1) : neuron(neuron),
+								 strength(strength),
+								 plasticityRate(plasticityRate),
+								 plasticityThreshold(plasticityThreshold),
+								 reliability(reliability)
+	{
+	}
 
 	struct Serialized
 	{
@@ -77,7 +95,7 @@ public:
 
 class NeuralNetwork;
 
-class Neuron
+class Neuron : public Reflectable
 {
 private:
 	size_t _id;
@@ -86,7 +104,7 @@ public:
 	NeuralNetwork *network;
 	NeuronType type;
 
-	MAPABLE_MEMBERS(type, value)
+	REFLECT(type, value)
 
 	Neuron(NeuronType neuronType, NeuralNetwork &network, size_t id = SIZE_MAX);
 
@@ -151,38 +169,66 @@ public:
 	static Neuron Deserialize(Serialized &data, NeuralNetwork &network);
 };
 
-class NeuralNetwork
+class NeuralNetwork : protected std::map<size_t, Neuron>, public Reflectable
 {
+
+public:
+	using Activation = std::function<float(float)>;
+
+	class activations
+	{
+	public:
+		static float relu(float x)
+		{
+			return (x > 0) ? x : 0;
+		}
+	};
+
 private:
 	size_t _id;
 
+protected:
 	// fix neurons' pointers to this network
 	void _update()
 	{
-		for (auto &[id, neuron] : _neurons)
+		for (auto &[id, neuron] : *this)
 		{
 			neuron.network = this;
 		}
 	}
 
 public:
-	NeuralNetwork(ActivationFunction activationFunction = reluDefaultActivation, size_t id = 0) : _id(id ? id : reinterpret_cast<std::uintptr_t>(&*this)), activationFunction(activationFunction) {}
+	const static inline std::map<std::string, Activation> activations{
+		{"relu", &activations::relu}};
 
-	ActivationFunction activationFunction;
+	using std::map<size_t, Neuron>::size, std::map<size_t, Neuron>::begin, std::map<size_t, Neuron>::end;
 
-	std::map<size_t, Neuron> _neurons;
+	std::string activation;
+
+	const Activation &activationFunction()
+	{
+		return activations.at(activation);
+	}
+
+	REFLECT(activation)
+
+	NeuralNetwork(std::string activation = "relu", size_t id = 0) : _id(id ? id : reinterpret_cast<std::uintptr_t>(&*this)), activation(activation)
+	{
+		if (!activations.contains(activation))
+		{
+			throw std::runtime_error("Invalid activation function: \"" + activation + "\"");
+		}
+	}
 
 	Neuron &neuron(size_t id)
 	{
 		_update();
-		return _neurons.at(id);
+		return at(id);
 	}
-
-	inline size_t size() const { return _neurons.size(); }
 
 	size_t idOf(const Neuron *neuron) const
 	{
-		for (const auto &[id, n] : _neurons)
+		for (const auto &[id, n] : *this)
 		{
 			if (neuron == &n)
 			{
@@ -192,7 +238,7 @@ public:
 		throw std::runtime_error("Neuron not found in network");
 	}
 
-	inline size_t addNeuron(Neuron &neuron, size_t id = SIZE_MAX)
+	size_t addNeuron(Neuron &neuron, size_t id = SIZE_MAX)
 	{
 		if (id == SIZE_MAX)
 		{
@@ -202,7 +248,7 @@ public:
 				id++;
 			}
 		}
-		auto result = _neurons.insert(std::make_pair(id, neuron));
+		auto result = insert(std::make_pair(id, neuron));
 		if (!result.second)
 		{
 			throw std::runtime_error("Neuron with the same ID already exists");
@@ -219,24 +265,24 @@ public:
 	bool hasNeuron(size_t id)
 	{
 		_update();
-		return _neurons.count(id);
+		return count(id);
 	}
 
 	void removeNeuron(size_t id)
 	{
-		auto it = _neurons.find(id);
-		if (it == _neurons.end())
+		auto it = find(id);
+		if (it == end())
 		{
 			throw std::out_of_range("Invalid neuron ID");
 		}
 
-		_neurons.erase(it);
+		erase(it);
 	}
 
 	std::vector<Neuron> neuronsOfType(NeuronType type)
 	{
 		std::vector<Neuron> ofType;
-		for (auto &[id, neuron] : _neurons)
+		for (auto &[id, neuron] : *this)
 		{
 			if (neuron.type == type)
 			{
@@ -254,7 +300,8 @@ public:
 
 	struct Serialized
 	{
-		uint64_t id;
+		size_t id;
+		std::string activation;
 		std::vector<Neuron::Serialized> neurons;
 	};
 
@@ -262,18 +309,16 @@ public:
 	{
 		std::vector<Neuron::Serialized> neuronsData;
 
-		for (auto &[id, neuron] : _neurons)
+		for (auto &[id, neuron] : *this)
 		{
 			neuronsData.push_back(neuron.serialize());
 		}
 
-		return {
-			_id,
-			neuronsData};
+		return {_id, activation, neuronsData};
 	}
 	static NeuralNetwork Deserialize(Serialized &data)
 	{
-		NeuralNetwork network(reluDefaultActivation, data.id);
+		NeuralNetwork network(data.activation, data.id);
 		for (Neuron::Serialized &neuronData : data.neurons)
 		{
 			Neuron neuron = Neuron::Deserialize(neuronData, network);
