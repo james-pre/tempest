@@ -330,7 +330,7 @@ private:
 			mutationCount = 1;
 		}
 
-		Mutatable* target;
+		BaseElement *target;
 
 		if (scope.active == "top")
 		{
@@ -342,18 +342,18 @@ private:
 			case FileType::FULL:
 				return "Environment mutation not supported";
 			case FileType::NETWORK:
-				target = static_cast<Mutatable*>(network);
+				target = static_cast<BaseElement *>(network);
 			}
 		}
 
 		if (scope.active == "network")
-			target = static_cast<Mutatable*>(network);
+			target = static_cast<BaseElement *>(network);
 		if (scope.active == "neuron")
-			target = static_cast<Mutatable*>(&network->get(scope.at("neuron")));
+			target = static_cast<BaseElement *>(&network->get(scope.at("neuron")));
 		if (scope.active == "connection")
-			target = static_cast<Mutatable*>(&network->get(scope.at("neuron")).outputs.at(scope.at("connection")));
+			target = static_cast<BaseElement *>(&network->get(scope.at("neuron")).outputs.at(scope.at("connection")));
 
-		if(target == nullptr)
+		if (target == nullptr)
 		{
 			return "Invalid target";
 		}
@@ -361,8 +361,6 @@ private:
 			target->mutate();
 
 		return "Mutated " + scope.active;
-
-		
 	}
 
 	std::string cmd_write()
@@ -398,7 +396,7 @@ private:
 
 			return "Created neuron #" + std::to_string(n.id());
 		}
-		if(!network->has(scope.at("neuron")))
+		if (!network->has(scope.at("neuron")))
 		{
 			return "No active neuron";
 		}
@@ -454,18 +452,18 @@ private:
 			case FileType::FULL:
 				return "Environment " + std::string(cmdv[0] == "data:set" ? "modification" : "data interaction") + " not supported";
 			case FileType::NETWORK:
-				target = static_cast<Reflectable*>(network);
+				target = static_cast<Reflectable *>(network);
 			}
 		}
 
 		if (scope.active == "environment")
 			return "Environment " + std::string(cmdv[0] == "data:set" ? "modification" : "data interaction") + " not supported";
 		if (scope.active == "network")
-			target = static_cast<Reflectable*>(network);
+			target = static_cast<Reflectable *>(network);
 		if (scope.active == "neuron")
-			target = static_cast<Reflectable*>(&network->get(scope.at("neuron")));
+			target = static_cast<Reflectable *>(&network->get(scope.at("neuron")));
 		if (scope.active == "connection")
-			target = static_cast<Reflectable*>(&network->get(scope.at("neuron")).outputs.at(scope.at("connection")));
+			target = static_cast<Reflectable *>(&network->get(scope.at("neuron")).outputs.at(scope.at("connection")));
 
 		if (target == nullptr)
 		{

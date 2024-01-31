@@ -9,6 +9,8 @@
 #include "utils.hpp"
 #include "generic.hpp"
 
+#define COPY_WARNING "Copy not allowed"
+
 enum class NeuronType
 {
 	NONE,
@@ -35,7 +37,7 @@ constexpr std::array<const char *, maxNeuronType> neuronTypes = {"none", "transi
 
 class NeuralNetwork;
 
-class Neuron : public Reflectable, public Mutatable
+class Neuron : public BaseElement
 {
 public:
 	struct ConnectionData
@@ -47,7 +49,7 @@ public:
 		float reliability = 1;		   // how reliable the passed value is
 	} __attribute__((packed));
 
-	class Connection : public ConnectionData, public Reflectable, public Mutatable
+	class Connection : public ConnectionData, public BaseElement
 	{
 
 	public:
@@ -121,13 +123,22 @@ public:
 
 	Neuron(NeuronType neuronType = NeuronType::TRANSITIONAL, NeuralNetwork *network = nullptr, size_t id = 0);
 
-	__attribute__ ((warning ("Copying Neuron, this will break Neuron::id()")))
+	__attribute__((warning(COPY_WARNING)))
 	Neuron(const Neuron &other)
 	{
 		from(other);
+	}
 
-
-		//#warning "Copying Neuron, this will break Neuron::id()"
+	__attribute__((warning(COPY_WARNING)))
+	Neuron &
+	operator=(const Neuron &other)
+	{
+		if (this == &other)
+		{
+			return *this;
+		}
+		from(other);
+		return *this;
 	}
 
 	void from(const Neuron &other)
@@ -138,17 +149,6 @@ public:
 		type = other.type;
 		outputs = other.outputs;
 		value = other.value;
-	}
-
-	__attribute__ ((warning ("Copying Neuron, this will break Neuron::id()")))
-	Neuron &operator=(const Neuron &other)
-	{
-		if (this != &other)
-		{
-			//#warning "Copying Neuron, this will break Neuron::id()"
-			from(other);
-		}
-		return *this;
 	}
 
 	void addConnection(Connection connection)
@@ -188,15 +188,16 @@ public:
 
 	float value = 0;
 
-	void update();
+	void update(unsigned max_depth = 1000);
 	void mutate();
 };
 
-class NeuralNetwork : public std::map<size_t, Neuron>, public Reflectable, public Mutatable
+class NeuralNetwork : public std::map<size_t, Neuron>, public BaseElement
 {
 public:
 	using Map = std::map<size_t, Neuron>;
 	using Activation = std::function<float(float)>;
+	using values_t = std::vector<float>;
 
 	class activations
 	{
@@ -257,13 +258,15 @@ public:
 		}
 	}
 
-	// Perform deep copy of the map elements
+	__attribute__((warning(COPY_WARNING)))
 	NeuralNetwork(const NeuralNetwork &other) : std::map<size_t, Neuron>(other)
 	{
 		from(other);
 	}
 
-	NeuralNetwork &operator=(const NeuralNetwork &other)
+	__attribute__((warning(COPY_WARNING)))
+	NeuralNetwork &
+	operator=(const NeuralNetwork &other)
 	{
 		if (this == &other)
 		{
@@ -362,11 +365,11 @@ public:
 		return ofType(NeuronType::OUTPUT);
 	}
 
-	void update()
+	void update(unsigned max_depth = 1000)
 	{
 		for (Neuron &inputNeuron : inputs())
 		{
-			inputNeuron.update();
+			inputNeuron.update(max_depth);
 		}
 	}
 
@@ -391,7 +394,7 @@ public:
 		create(NeuronType::TRANSITIONAL);
 	}
 
-	std::vector<float> run(std::vector<float> inputValues)
+	values_t run(const values_t inputValues, unsigned max_depth = 1000)
 	{
 		std::vector<Neuron> inputs = ofType(NeuronType::INPUT);
 		if (inputValues.size() != inputs.size())
@@ -404,9 +407,9 @@ public:
 			inputs[i].value = inputValues[i];
 		}
 
-		update();
+		update(max_depth);
 
-		std::vector<float> outputValues;
+		values_t outputValues;
 		for (Neuron &output : ofType(NeuronType::OUTPUT))
 		{
 			outputValues.push_back(output.value);

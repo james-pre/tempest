@@ -1,9 +1,4 @@
-/*
-Generic helper classes
-
-Reflectable: for reflection
-Mutatable: for things that have a mutate method
-*/
+// Generic helper classes
 
 #ifndef H_generic
 #define H_generic
@@ -12,21 +7,24 @@ Mutatable: for things that have a mutate method
 #include <stdexcept>
 #include "utils.hpp"
 
+// Helper macro for Reflectable::getProperty
 #define _REFLECT_GET(name) \
 	if (key == #name)      \
 		return name;
+// Helper macro for Reflectable::getPropertyString
 #define _REFLECT_GET_STRING(name) \
 	if (key == #name)             \
 		return std::to_string(name);
+// Helper macro for Reflectable::setProperty
 #define _REFLECT_SET(name)                             \
 	if (key == #name)                                  \
 	{                                                  \
 		name = from_string<decltype(name)>(new_value); \
 	}
+// Helper macro for Reflectable::hasProperty
 #define _REFLECT_HAS(name) \
 	if (key == #name)      \
 		return true;
-#define _REFLECT_KEYS(name) #name,
 
 #define REFLECT(args...)                                               \
 	template <typename T>                                              \
@@ -55,6 +53,9 @@ Mutatable: for things that have a mutate method
 		return false;                                                  \
 	}
 
+/*
+Base class for property reflection
+*/
 class Reflectable
 {
 public:
@@ -86,12 +87,20 @@ public:
 	virtual ~Reflectable() = default;
 };
 
-class Mutatable
+/*
+Base class for most simulation elements. 
+*/
+class BaseElement : public Reflectable
 {
 public:
 	virtual void mutate()
 	{
-		throw new std::runtime_error("Mutatable::mutate virtual call");
+		throw new std::runtime_error("BaseElement::mutate virtual call");
+	}
+
+	virtual void update([[maybe_unused]] unsigned max_depth)
+	{
+		throw new std::runtime_error("BaseElement::update virtual call");
 	}
 };
 

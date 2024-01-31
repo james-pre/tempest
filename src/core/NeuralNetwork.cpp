@@ -17,11 +17,15 @@ size_t Neuron::id() const
 	return network->idOf(this);
 }
 
-void Neuron::update()
+void Neuron::update(unsigned max_depth)
 {
 	if (network == nullptr)
 	{
 		throw new std::runtime_error("Invalid network");
+	}
+	if (--max_depth == 0)
+	{
+		return;
 	}
 	float activation = network->activationFunction()(value);
 
@@ -31,7 +35,7 @@ void Neuron::update()
 		float outputEffect = activation * output.strength * plasticityEffect * output.reliability;
 		Neuron &neuron = network->get(output.neuron);
 		neuron.value += outputEffect;
-		neuron.update();
+		neuron.update(max_depth);
 	}
 }
 
