@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <sstream>
 #include <iostream>
+#include <concepts>
 
 /*
 Resolves enums
@@ -38,77 +39,6 @@ See https://www.scs.stanford.edu/~dm/blog/va-opt.html
 	macro(a)                           \
 		__VA_OPT__(_FOREACH _PARENS(macro, __VA_ARGS__))
 #define _FOREACH() _FOREACH_HELPER
-
-#define _REFLECT_GET(name) \
-	if (key == #name)      \
-		return name;
-#define _REFLECT_GET_STRING(name) \
-	if (key == #name)             \
-		return std::to_string(name);
-#define _REFLECT_SET(name)                             \
-	if (key == #name)                                  \
-	{                                                  \
-		name = from_string<decltype(name)>(new_value); \
-	}
-#define _REFLECT_HAS(name) \
-	if (key == #name)      \
-		return true;
-#define _REFLECT_KEYS(name) #name,
-
-#define REFLECT(args...)                                               \
-	template <typename T>                                              \
-	T &get(const std::string &key)                                     \
-	{                                                                  \
-		FOREACH(_REFLECT_GET, args)                                    \
-		throw new std::runtime_error("mapable member does not exist"); \
-	}                                                                  \
-	std::string get_string(const std::string &key)                     \
-	{                                                                  \
-		FOREACH(_REFLECT_GET_STRING, args)                             \
-		throw new std::runtime_error("mapable member does not exist"); \
-	}                                                                  \
-	template <typename T>                                              \
-	void set(const std::string &key, T new_value)                      \
-	{                                                                  \
-		FOREACH(_REFLECT_SET, args)                                    \
-	}                                                                  \
-	/*template <typename T>*/                                          \
-	void set(const std::string &key, const std::string &new_value)     \
-	{                                                                  \
-		FOREACH(_REFLECT_SET, args)                                    \
-	}                                                                  \
-	bool has(const std::string &key)                                   \
-	{                                                                  \
-		FOREACH(_REFLECT_HAS, args)                                    \
-		return false;                                                  \
-	}
-
-class Reflectable
-{
-public:
-	template <typename T>
-	T &get(const std::string &key)
-	{
-		throw new std::runtime_error("MapableMembers::get virtual call");
-	}
-
-	virtual std::string get_string([[maybe_unused]] const std::string &key)
-	{
-		throw new std::runtime_error("MapableMembers::get_string virtual call");
-	}
-
-	virtual void set([[maybe_unused]] const std::string &key, [[maybe_unused]] const std::string &new_value)
-	{
-		throw new std::runtime_error("MapableMembers::set virtual call");
-	}
-
-	virtual bool has([[maybe_unused]] const std::string &key)
-	{
-		throw new std::runtime_error("MapableMembers::has virtual call");
-	}
-
-	virtual ~Reflectable() = default;
-};
 
 template <typename T>
 T from_string(T val)
@@ -170,6 +100,38 @@ T stonum(std::string &str)
 	T value;
 	std::stringstream(str) >> value;
 	return value;
+}
+
+bool debug = 0;
+std::ostream &debug_output_default = std::cout;
+
+template <typename... TData>
+void log_debug(std::ostream &out, TData &&...data)
+{
+	if (!debug)
+	{
+		return;
+	}
+
+	out << "[debug] ";
+	((out << std::forward<TData>(data)), ...);
+	out << std::endl;
+}
+
+template <typename... TData>
+void log_debug(TData &&...data)
+{
+	log_debug(debug_output_default, data...);
+}
+
+void log_debug(const std::string &message, std::ostream &out = debug_output_default)
+{
+	if (!debug)
+	{
+		return;
+	}
+
+	out << "[debug] " << message << std::endl;
 }
 
 #endif

@@ -24,7 +24,15 @@ int main(int argc, char **argv)
 	positionals.add_options()("input", po::value<std::string>(), "Input file");
 	po::positional_options_description _positionals;
 	_positionals.add("input", 1);
-	po::store(po::command_line_parser(argc, argv).options(po::options_description().add(cli).add(positionals)).positional(_positionals).run(), options);
+	try
+	{
+		po::store(po::command_line_parser(argc, argv).options(po::options_description().add(cli).add(positionals)).positional(_positionals).run(), options);
+	}
+	catch( const std::exception &ex)
+	{
+		std::cerr << ex.what() << std::endl;
+		return 1;
+	}
 	po::notify(options);
 
 	if (options.count("help"))
@@ -54,7 +62,7 @@ int main(int argc, char **argv)
 		std::cout << "Dump of " << path << ":\n";
 
 		File file;
-		file.read(path);
+		file.readPath(path);
 
 		std::cout << "Header: \nmagic: " << file.magic() << "\n";
 		const unsigned char _type = file.header.type;
@@ -68,7 +76,6 @@ int main(int argc, char **argv)
 		}
 
 		std::ostream &out = output.empty() ? std::cout : *(new std::ofstream(output));
-		File::Data &data = file.data;
 
 		if (format == "gv" || format == "dot")
 		{
@@ -79,13 +86,13 @@ int main(int argc, char **argv)
 				out << "";
 				break;
 			case FileType::NETWORK:
-				out << "digraph net_" << data.network.id << " {\n";
-				for (Neuron::Serialized &neuron : data.network.neurons)
+				out << "digraph net_" << file.network->id << " {\n";
+				for (auto &[id, neuron] : *file.network)
 				{
-					out << "\tn_" << neuron.id << " -> {";
-					for (NeuronConnection::Serialized &conn : neuron.outputs)
+					out << "\tn_" << id << " -> {";
+					for (Neuron::Connection &conn : neuron.outputs)
 					{
-						if (&conn != &neuron.outputs[0])
+						if (conn != neuron.outputs[0])
 						{
 							out << ',';
 						}
@@ -113,18 +120,19 @@ int main(int argc, char **argv)
 			}
 			if (file.type() == FileType::NETWORK)
 			{
-				out << "Network " << data.network.id << " (" << data.network.neurons.size() << " neurons)" << (detailLevel > 0) << std::endl;
+				out << "Network " << file.network->id << " (" << file.network->size() << " neurons)" << (detailLevel > 0) << std::endl;
 				out.flush();
-				for (Neuron::Serialized &neuron : data.network.neurons)
+				for (auto &[id, neuron] : *file.network)
 				{
-					out << "\tNeuron " << neuron.id << " (";
-					out << (neuron.type < maxNeuronType) ? neuronTypes.at(neuron.type) : "Unknown Type (" + std::to_string(neuron.type) + ")";
+					uint8_t type = static_cast<unsigned char>(neuron.type);
+					out << "\tNeuron " << id << " (";
+					out << (type < maxNeuronType) ? neuronTypes.at(type) : "Unknown Type (" + std::to_string(type) + ")";
 					out << ", " << neuron.outputs.size() << " outputs)" << (detailLevel > 1 && neuron.outputs.size() > 0 ? ":" : "");
 					if (detailLevel > 1)
 					{
-						for (NeuronConnection::Serialized &conn : neuron.outputs)
+						for (Neuron::Connection &conn : neuron.outputs)
 						{
-							if (&conn != &neuron.outputs[0])
+							if (conn != neuron.outputs[0])
 							{
 								out << ',';
 							}

@@ -34,7 +34,16 @@ int main(int argc, char **argv)
 	po::positional_options_description positionals;
 	positionals.add("output", 1);
 
-	po::store(po::command_line_parser(argc, argv).options(po::options_description().add(cli).add(config).add(_positionals)).positional(positionals).run(), options);
+	try
+	{
+		po::store(po::command_line_parser(argc, argv).options(po::options_description().add(cli).add(config).add(_positionals)).positional(positionals).run(), options);
+	}
+	catch( const std::exception &ex)
+	{
+		std::cerr << ex.what() << std::endl;
+		return 1;
+	}
+
 	if (options.count("config"))
 	{
 		std::string config_path = options.at("config").as<std::string>();
@@ -69,13 +78,17 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	std::cout << "Creating " << path << "\n";
+	debug = options.count("debug");
 
-	File file({});
+	std::cout << "Creating " << path << "..." << std::endl;
+
+	log_debug("Initializing...");
+	File file;
 
 	file.magic(File::Magic);
 
 	FileType type;
+	unsigned long type_value;
 	std::string type_string = options.at("type").as<std::string>();
 	std::transform(type_string.begin(), type_string.end(), type_string.begin(), ::tolower);
 	auto type_it = std::find(fileTypes.begin(), fileTypes.end(), type_string);
@@ -88,7 +101,7 @@ int main(int argc, char **argv)
 		size_t pos;
 		try
 		{
-			unsigned long type_value = std::stoul(type_string, &pos);
+			type_value = std::stoul(type_string, &pos);
 			if (pos != type_string.length())
 			{
 				std::cout << "Warning: type truncated" << std::endl;
@@ -111,10 +124,10 @@ int main(int argc, char **argv)
 
 	File::Version version = options.at("version").as<File::Version>();
 	file.version(version);
-
+	log_debug("Creating data for file...");
+	NeuralNetwork network;
 	if (type == FileType::NETWORK)
 	{
-		NeuralNetwork network;
 		const unsigned num_neurons = options.at("neurons").as<unsigned>();
 		const unsigned num_mutations = options.at("mutations").as<unsigned>();
 		const unsigned num_inputs = options.at("inputs").as<unsigned>();
@@ -127,7 +140,7 @@ int main(int argc, char **argv)
 		for (unsigned i = 0; i < num_neurons; i++)
 		{
 			NeuronType type = i < num_inputs ? NeuronType::INPUT : (i >= num_neurons - num_outputs ? NeuronType::OUTPUT : NeuronType::TRANSITIONAL);
-			network.createNeuron(type);
+			network.create(type);
 		}
 
 		for (auto &[id, neuron] : network)
@@ -137,9 +150,10 @@ int main(int argc, char **argv)
 				neuron.mutate();
 			}
 		}
-		file.data = File::Data(network.serialize());
+		file.network = &network;
 	}
-
-	file.write(path);
+	log_debug("Writing...");
+	file.writePath(path);
+	std::cout << "Done!" << std::endl;
 	return 0;
 }

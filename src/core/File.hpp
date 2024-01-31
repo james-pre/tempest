@@ -25,35 +25,7 @@ constexpr std::array<const char *, maxFileType> fileTypes = {"none", "network", 
 class File
 {
 public:
-	typedef unsigned int Version;
-
-	union Data
-	{
-		NeuralNetwork::Serialized network;
-
-		Data(const Data &other)
-			: network(other.network)
-		{
-		}
-
-		Data(const NeuralNetwork::Serialized &network)
-			: network(network)
-		{
-		}
-
-		Data() : network{} {}
-
-		~Data() {}
-
-		Data &operator=(const Data &other)
-		{
-			if (this != &other)
-			{
-				network = other.network;
-			}
-			return *this;
-		}
-	};
+	using Version = unsigned int;
 
 	struct Header
 	{
@@ -64,33 +36,38 @@ public:
 
 private:
 	template <typename T>
-	static void _writeSingle(std::ostream &output, const T &data)
+	static void _write(std::ostream &output, const T &data)
 	{
 		output.write(reinterpret_cast<const char *>(&data), sizeof(data));
 	}
 
 	template <typename T>
-	static void _readSingle(std::istream &input, T &data)
+	static void _read(std::istream &input, T &data)
 	{
 		input.read(reinterpret_cast<char *>(&data), sizeof(data));
 	}
 
 protected:
 	template <typename... Args>
-	static void _write(std::ostream &output, const Args &...args)
+	static void write(std::ostream &output, const Args &...args)
 	{
-		(_writeSingle(output, args), ...);
+		(_write(output, args), ...);
 	}
 
 	template <typename... Args>
-	static void _read(std::istream &input, Args &...args)
+	static void read(std::istream &input, Args &...args)
 	{
-		(_readSingle(input, args), ...);
+		(_read(input, args), ...);
 	}
 
 public:
 	Header header;
-	Data data;
+
+	union
+	{
+		NeuralNetwork *network = new NeuralNetwork();
+		Environment *environment;
+	};
 
 	inline const std::string magic() const { return std::string(header.magic); }
 	inline void magic(const std::string &magic) { strcpy(header.magic, magic.c_str()); }
@@ -101,15 +78,13 @@ public:
 	inline Version version() const { return header.version; }
 	inline void version(const Version version) { header.version = static_cast<uint16_t>(version); }
 
-	File()
-	{
-	}
+	File() {}
 
-	File(Header header, Data data) : header(header), data(data)
-	{
-	}
+	File(Header header) : header(header) {}
 
-	void write(std::string path) const
+	~File() {}
+
+	void writePath(const std::string &path) const
 	{
 		std::ofstream output(path, std::ios::binary);
 		if (!output.is_open())
@@ -117,25 +92,24 @@ public:
 			throw std::runtime_error("Failed to open file: " + path);
 		}
 
-		_write(output, header);
-
-		if (type() == FileType::NETWORK)
+		write(output, header);
+		switch (type())
 		{
-			NeuralNetwork::Serialized net = data.network;
-			_write(output, net.id, net.name, net.activation, net.neurons.size());
-			for (Neuron::Serialized &neuron : net.neurons)
-			{
-				_write(output, neuron.id, neuron.type, neuron.outputs.size());
-				for (NeuronConnection::Serialized &conn : neuron.outputs)
-				{
-					_write(output, conn);
-				}
-			}
+		case FileType::NONE:
+			break;
+		case FileType::PARTIAL:
+			break;
+		case FileType::FULL:
+			write(output, *environment);
+			break;
+		case FileType::NETWORK:
+			write(output, *network);
+			break;
 		}
 		output.close();
 	}
 
-	void read(std::string path)
+	void readPath(const std::string &path /*, Data &data*/)
 	{
 		std::ifstream input(path, std::ios::binary);
 		if (!input.is_open())
@@ -143,27 +117,19 @@ public:
 			throw std::runtime_error("Failed to open file: " + path);
 		}
 
-		_read(input, header);
-
-		if (type() == FileType::NETWORK)
+		read(input, header);
+		switch (type())
 		{
-			NeuralNetwork::Serialized &net = data.network;
-			size_t netSize;
-			_read(input, net.id, net.name, net.activation, netSize);
-			for (size_t n = 0; n < netSize; n++)
-			{
-				Neuron::Serialized neuron;
-				size_t outputsSize;
-				_read(input, neuron.id, neuron.type, outputsSize);
-				for (size_t o = 0; o < outputsSize; o++)
-				{
-					NeuronConnection::Serialized conn;
-					_read(input, conn);
-					neuron.outputs.push_back(conn);
-				}
-
-				net.neurons.push_back(neuron);
-			}
+		case FileType::NONE:
+			break;
+		case FileType::PARTIAL:
+			break;
+		case FileType::FULL:
+			read(input, *environment);
+			break;
+		case FileType::NETWORK:
+			read(input, *network);
+			break;
 		}
 		input.close();
 
@@ -177,19 +143,69 @@ public:
 };
 
 template <>
-void File::_writeSingle(std::ostream &output, const std::string &string)
+void File::_write(std::ostream &output, const std::string &string)
 {
-	_writeSingle(output, string.size());
+	_write(output, string.size());
 	output.write(string.data(), string.size());
 }
 
 template <>
-void File::_readSingle(std::istream &input, std::string &string)
+void File::_write(std::ostream &output, const Neuron::Connection &conn)
+{
+	_write(output, static_cast<Neuron::ConnectionData>(conn));
+}
+
+template <>
+void File::_write(std::ostream &output, const NeuralNetwork &net)
+{
+	write(output, net.id, net.name, net.activation, net.size());
+
+	for (const auto &[id, neuron] : net)
+	{
+		write(output, id, static_cast<uint8_t>(neuron.type), neuron.outputs.size());
+		for (const Neuron::Connection &conn : neuron.outputs)
+		{
+			write(output, conn);
+		}
+	}
+}
+
+template <>
+void File::_read(std::istream &input, std::string &string)
 {
 	size_t size;
-	_readSingle(input, size);
+	_read(input, size);
 	string.resize(size);
 	input.read(&string[0], size);
+}
+
+template <>
+void File::_read(std::istream &input, Neuron::Connection &conn)
+{
+	_read<Neuron::ConnectionData>(input, conn);
+}
+
+template <>
+void File::_read(std::istream &input, NeuralNetwork &net)
+{
+	size_t netSize;
+	read(input, net.id, net.name, net.activation, netSize);
+	for (size_t n = 0; n < netSize; n++)
+	{
+		Neuron neuron;
+		size_t outputsSize;
+		uint8_t type;
+		read(input, neuron._id, type, outputsSize);
+		neuron.type = static_cast<NeuronType>(type);
+		for (size_t o = 0; o < outputsSize; o++)
+		{
+			Neuron::Connection conn;
+			read(input, conn);
+			neuron.outputs.push_back(conn);
+		}
+
+		net.add(neuron);
+	}
 }
 
 #endif

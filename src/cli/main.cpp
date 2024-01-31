@@ -21,7 +21,15 @@ int main(int argc, char **argv)
 	po::positional_options_description _positionals;
 	_positionals.add("command", 1);
 	_positionals.add("arguments", -1);
-	po::store(po::command_line_parser(argc, argv).options(po::options_description().add(cli).add(positionals)).positional(_positionals).allow_unregistered().run(), options);
+	try
+	{
+		po::store(po::command_line_parser(argc, argv).options(po::options_description().add(cli).add(positionals)).positional(_positionals).allow_unregistered().run(), options);
+	}
+	catch( const std::exception &ex)
+	{
+		std::cerr << ex.what() << std::endl;
+		return 1;
+	}
 	po::notify(options);
 
 	if (options.count("version"))

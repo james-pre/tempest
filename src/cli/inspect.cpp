@@ -24,7 +24,15 @@ int main(int argc, char **argv)
 	po::positional_options_description positionals;
 	positionals.add("input", 1);
 	po::variables_map options;
-	po::store(po::command_line_parser(argc, argv).options(po::options_description().add(cli).add(_positionals)).positional(positionals).run(), options);
+	try
+	{
+		po::store(po::command_line_parser(argc, argv).options(po::options_description().add(cli).add(_positionals)).positional(positionals).run(), options);
+	}
+	catch( const std::exception &ex)
+	{
+		std::cerr << ex.what() << std::endl;
+		return 1;
+	}
 	po::notify(options);
 
 	if (options.count("help"))
