@@ -43,7 +43,7 @@ public:
 	struct ConnectionData
 	{
 		size_t neuron = SIZE_MAX;	   // ref to connected neuron
-		float strength = 1;			   // strength of the connection (>1: excitatory, <1: inhibitory)
+		float strength = 0.75;			   // strength of the connection (>1: excitatory, <1: inhibitory)
 		float plasticityRate = 0;	   // how fast the strength changes
 		float plasticityThreshold = 1; // the max strength
 		float reliability = 1;		   // how reliable the passed value is
@@ -57,7 +57,7 @@ public:
 
 		Connection(
 			size_t _neuron = SIZE_MAX,
-			float _strength = 1,
+			float _strength = 0.75,
 			float _plasticityRate = 0,
 			float _plasticityThreshold = 1,
 			float _reliability = 1)
@@ -81,23 +81,22 @@ public:
 		// Todo: This should be changed to properly account for the different attributes
 		void mutate()
 		{
-			float mutationStrength = rand_seeded<float>() / 2;
-			float newValue = rand_seeded<float>() - .5;
+			float newValue = (rand_seeded<float>() - .5) * rand_seeded<float>() / 2;
 			switch (rand_seeded<int>() % 5)
 			{
 			case 0:
 				return;
 			case 1:
-				strength += newValue * mutationStrength;
+				strength += newValue;
 				return;
 			case 2:
-				plasticityRate += newValue * mutationStrength;
+				plasticityRate += newValue;
 				return;
 			case 3:
-				plasticityThreshold += newValue * mutationStrength;
+				plasticityThreshold += newValue;
 				return;
 			case 4:
-				reliability += newValue * mutationStrength;
+				reliability += newValue;
 				return;
 			}
 		}
@@ -186,10 +185,10 @@ public:
 		removeConnection(*it);
 	}
 
-	float value = 0;
+	float value = 0.5;
 
 	void update(unsigned max_depth = 1000);
-	void mutate();
+	void mutate(BaseElement::MutationOptions options);
 };
 
 class NeuralNetwork : public std::map<size_t, Neuron>, public BaseElement
@@ -197,7 +196,9 @@ class NeuralNetwork : public std::map<size_t, Neuron>, public BaseElement
 public:
 	using Map = std::map<size_t, Neuron>;
 	using Activation = std::function<float(float)>;
-	using values_t = std::vector<float>;
+	using Values = std::vector<float>;
+	using NeuronV = std::vector<std::reference_wrapper<Neuron>>;
+	using UpdateCallback = std::function<void(const Values)>;
 
 	class activations
 	{
@@ -218,15 +219,31 @@ protected:
 		}
 	}
 
-	std::vector<Neuron> ofType(NeuronType type)
+	void _notify()
 	{
-		std::vector<Neuron> ofType;
+		if(!runCallback)
+		{
+			return;
+		}
+
+		runCallback(output_values());
+	}
+
+	unsigned _max_depth = 1;
+
+	UpdateCallback runCallback;
+
+	friend class Neuron;
+
+	NeuronV ofType(NeuronType type)
+	{
+		NeuronV ofType;
 		for (auto &[id, neuron] : *this)
 		{
 			if (neuron.type == type)
 			{
-				neuron.network = this;
-				ofType.push_back(neuron);
+				//neuron.network = this;
+				ofType.push_back(std::ref(neuron));
 			}
 		}
 
@@ -235,18 +252,23 @@ protected:
 
 public:
 	const static inline std::map<std::string, Activation> activations{
-		{"relu", &activations::relu}};
-
-	// using Map::size, Map::begin, Map::end;
+		{"relu", &activations::relu},
+	};
 
 	size_t id;
 	std::string name;
 	std::string activation;
 
-	const Activation &activationFunction()
+	const Activation &activationFunction() const
 	{
+		if(!activations.contains(activation))
+		{
+			throw new std::runtime_error("activation function does not exist");
+		}
 		return activations.at(activation);
 	}
+
+	BaseElement::MutationOptions mutationOptions;
 
 	REFLECT(name, activation)
 
@@ -355,18 +377,49 @@ public:
 		erase(it);
 	}
 
-	std::vector<Neuron> inputs()
+	NeuronV inputs()
 	{
 		return ofType(NeuronType::INPUT);
 	}
 
-	std::vector<Neuron> outputs()
+	Values input_values()
+	{
+		Values inputValues;
+		for (Neuron &input : inputs())
+		{
+			inputValues.push_back(input.value);
+		}
+		return inputValues;
+	}
+
+	void input_values(Values values)
+	{
+		NeuronV _inputs = inputs();
+		for (size_t i = 0; i < values.size(); ++i)
+		{
+			Neuron &n = _inputs[i];
+			n.value = values[i];
+		}
+	}
+
+	NeuronV outputs()
 	{
 		return ofType(NeuronType::OUTPUT);
 	}
 
+	Values output_values()
+	{
+		Values outputValues;
+		for (Neuron &output : outputs())
+		{
+			outputValues.push_back(output.value);
+		}
+		return outputValues;
+	}
+
 	void update(unsigned max_depth = 1000)
 	{
+		_max_depth = max_depth;
 		for (Neuron &inputNeuron : inputs())
 		{
 			inputNeuron.update(max_depth);
@@ -381,7 +434,7 @@ public:
 		size_t target = rand_seeded<unsigned>() % size();
 		if (random < .6)
 		{
-			get(target).mutate();
+			get(target).mutate(mutationOptions);
 			return;
 		}
 
@@ -394,28 +447,17 @@ public:
 		create(NeuronType::TRANSITIONAL);
 	}
 
-	values_t run(const values_t inputValues, unsigned max_depth = 1000)
+	Values run(const Values inputValues, unsigned max_depth = 1000, UpdateCallback onUpdate = nullptr)
 	{
-		std::vector<Neuron> inputs = ofType(NeuronType::INPUT);
-		if (inputValues.size() != inputs.size())
+		if (inputValues.size() != inputs().size())
 		{
 			throw new std::invalid_argument("Input size does not match the number of input neurons.");
 		}
 
-		for (size_t i = 0; i < inputValues.size(); ++i)
-		{
-			inputs[i].value = inputValues[i];
-		}
-
+		runCallback = onUpdate;
+		input_values(inputValues);
 		update(max_depth);
-
-		values_t outputValues;
-		for (Neuron &output : ofType(NeuronType::OUTPUT))
-		{
-			outputValues.push_back(output.value);
-		}
-
-		return outputValues;
+		return output_values();
 	}
 };
 

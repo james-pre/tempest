@@ -358,7 +358,7 @@ private:
 			return "Invalid target";
 		}
 		for (unsigned i = 0; i < mutationCount; i++)
-			target->mutate();
+			target->mutate(network->mutationOptions);
 
 		return "Mutated " + scope.active;
 	}

@@ -27,7 +27,8 @@ int main(int argc, char **argv)
 		("neurons,n", po::value<unsigned int>()->value_name("num")->default_value(0), "number of neurons to create per network")
 		("inputs,i", po::value<unsigned int>()->value_name("num")->default_value(0), "number of input neurons")
 		("outputs,o", po::value<unsigned int>()->value_name("num")->default_value(0), "number of output neurons")
-		("mutations,m", po::value<unsigned int>()->value_name("num")->default_value(0), "number of mutations");
+		("mutations,m", po::value<unsigned int>()->value_name("num")->default_value(0), "number of mutations")
+		("clumping,g", po::value<float>()->value_name("factor")->default_value(0), "how much neurons should clump together");
 	
 	po::options_description _positionals;
 	_positionals.add_options()("output", po::value<std::string>());
@@ -132,6 +133,7 @@ int main(int argc, char **argv)
 		const unsigned num_mutations = options.at("mutations").as<unsigned>();
 		const unsigned num_inputs = options.at("inputs").as<unsigned>();
 		const unsigned num_outputs = options.at("outputs").as<unsigned>();
+		const float clumping = options.at("clumping").as<float>();
 		if(num_neurons < num_inputs + num_outputs)
 		{
 			std::cerr << "The number of input and output neurons exceeds the number of total neurons in the network." << std::endl;
@@ -147,7 +149,7 @@ int main(int argc, char **argv)
 		{
 			for (unsigned i = 0; i < num_mutations; i++)
 			{
-				neuron.mutate();
+				neuron.mutate({ 1 - clumping });
 			}
 		}
 		file.network = &network;

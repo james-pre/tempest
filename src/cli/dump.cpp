@@ -90,13 +90,13 @@ int main(int argc, char **argv)
 				for (auto &[id, neuron] : *file.network)
 				{
 					out << "\tn_" << id << " -> {";
-					for (Neuron::Connection &conn : neuron.outputs)
+					for(size_t i = 0; i < neuron.outputs.size(); i++)
 					{
-						if (conn != neuron.outputs[0])
+						if (i != 0)
 						{
 							out << ',';
 						}
-						out << "n_" << conn.neuron;
+						out << "n_" << neuron.outputs[i].neuron;
 					}
 					out << "}\n";
 				}
@@ -130,13 +130,14 @@ int main(int argc, char **argv)
 					out << ", " << neuron.outputs.size() << " outputs)" << (detailLevel > 1 && neuron.outputs.size() > 0 ? ":" : "");
 					if (detailLevel > 1)
 					{
-						for (Neuron::Connection &conn : neuron.outputs)
+						for(size_t i = 0; i < neuron.outputs.size(); i++)
 						{
-							if (conn != neuron.outputs[0])
+							const Neuron::Connection &conn = neuron.outputs[i];
+							if (i != 0)
 							{
 								out << ',';
 							}
-							out << " " << conn.neuron;
+							out << "n_" << conn.neuron;
 							if (detailLevel > 2)
 							{
 								out << " (" << conn.strength << "," << conn.plasticityRate << "," << conn.plasticityThreshold << "," << conn.reliability << ")";

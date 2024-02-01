@@ -93,7 +93,12 @@ Base class for most simulation elements.
 class BaseElement : public Reflectable
 {
 public:
-	virtual void mutate()
+	struct MutationOptions
+	{
+		float clumping;
+	};
+
+	virtual void mutate([[maybe_unused]] const MutationOptions &options)
 	{
 		throw new std::runtime_error("BaseElement::mutate virtual call");
 	}

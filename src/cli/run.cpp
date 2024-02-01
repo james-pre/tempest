@@ -6,6 +6,31 @@
 
 namespace po = boost::program_options;
 
+void runCallback(const NeuralNetwork::Values outputs)
+{
+	static unsigned updates = 0;
+	if(++updates % 1000 != 0)
+	{
+		return;
+	}
+	if(!debug)
+	{
+		return;
+	}
+	bool first = true;
+	std::cout << "\r" << "[" << (updates/1000) << "k] ";
+	for(const float output : outputs)
+	{
+		if(!first)
+		{
+			std::cout << ",";
+		}
+		first = false;
+		std::cout << output;
+	}
+	std::cout.flush();
+}
+
 int main(int argc, char **argv)
 {
 	po::variables_map options;
@@ -13,7 +38,7 @@ int main(int argc, char **argv)
 	cli.add_options()
 		("help,h", "Display help message")
 		("debug", "Show verbose/debug messages")
-		("inputs,i", po::value<NeuralNetwork::values_t>()->value_name("values")->multitoken(), "Input values")
+		("inputs,i", po::value<NeuralNetwork::Values>()->value_name("values")->multitoken(), "Input values")
 		("default", po::value<float>()->default_value(0)->value_name("value"), "Default value for missing inputs")
 		("no-defaults", "Do not default missing inputs")
 		("max-depth,d", po::value<unsigned>()->default_value(1000)->value_name("depth"), "The maximum depth of Neurons updates");
@@ -47,6 +72,7 @@ int main(int argc, char **argv)
 	}
 
 	const std::string path = options.at("network").as<std::string>();
+	debug = options.count("debug");
 
 	try
 	{
@@ -61,9 +87,9 @@ int main(int argc, char **argv)
 			return 1;
 		}
 
-		NeuralNetwork::values_t inputs = options.at("inputs").as<NeuralNetwork::values_t>();
+		NeuralNetwork::Values inputs = options.at("inputs").as<NeuralNetwork::Values>();
 
-		const std::vector<Neuron> inputNeurons = file.network->inputs();
+		const NeuralNetwork::NeuronV inputNeurons = file.network->inputs();
 		const size_t numInputNeurons = inputNeurons.size();
 		
 		if(inputs.size() > numInputNeurons)
@@ -88,12 +114,13 @@ int main(int argc, char **argv)
 
 		const unsigned maxDepth = options.at("max-depth").as<unsigned>();
 
-		std::cout << "Running..." << std::endl;
+		std::cout << "Running..."
+		<< "\nWith maximum depth: " << maxDepth
+		<< std::endl;
 
-		const NeuralNetwork::values_t outputs = file.network->run(inputs, maxDepth);
-
+		NeuralNetwork::Values outputs = file.network->run(inputs, maxDepth, runCallback);
+		std::cout << "\r" << std::flush;
 		bool first = true;
-
 		for(const float output : outputs)
 		{
 			if(!first)
@@ -101,7 +128,6 @@ int main(int argc, char **argv)
 				std::cout << ",";
 			}
 			first = false;
-
 			std::cout << output;
 		}
 

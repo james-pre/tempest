@@ -1,5 +1,8 @@
 #include <cstring>
+#include <cmath>
 #include <stdexcept>
+#include <limits>
+#include <algorithm>
 #include "utils.hpp"
 #include "NeuralNetwork.hpp"
 
@@ -17,36 +20,52 @@ size_t Neuron::id() const
 	return network->idOf(this);
 }
 
-void Neuron::update(unsigned max_depth)
+void Neuron::update(unsigned depth)
 {
 	if (network == nullptr)
 	{
 		throw new std::runtime_error("Invalid network");
 	}
-	if (--max_depth == 0)
+	if (depth == 0 || depth > network->_max_depth)
 	{
 		return;
 	}
+	if (type == NeuronType::OUTPUT)
+	{
+		network->_notify();
+		return;
+	}
+
 	float activation = network->activationFunction()(value);
+	float outputEffect;
 
 	for (Neuron::Connection &output : outputs)
 	{
-		float plasticityEffect = (std::abs(output.strength) > output.plasticityThreshold) ? output.plasticityRate : 1;
-		float outputEffect = activation * output.strength * plasticityEffect * output.reliability;
 		Neuron &neuron = network->get(output.neuron);
-		neuron.value += outputEffect;
-		neuron.update(max_depth);
+		if (neuron.type == NeuronType::INPUT)
+		{
+			return;
+		}
+		// float plasticityEffect = (std::abs(output.strength) > output.plasticityThreshold) ? output.plasticityRate : 1;
+		outputEffect = activation * output.strength * output.reliability;
+
+		neuron.value *= outputEffect;
+		neuron.update(--depth);
 	}
 }
 
-void Neuron::mutate()
+void Neuron::mutate(BaseElement::MutationOptions options)
 {
 	if (network == nullptr)
 	{
 		throw new std::runtime_error("Invalid network");
 	}
-	unsigned _rand = rand_seeded<unsigned>();
-	size_t targetID = _rand % network->size();
+	size_t baseID = id(),
+		   net_size = network->size(),
+		   max = static_cast<size_t>(options.clumping / 2 * net_size);
+	signed int adjustment = std::floor((0.5 - (baseID / (net_size - 1))) * options.clumping);
+	size_t targetID = baseID + adjustment + (rand_seeded<float>() > 0.5f ? 1 : -1) * (rand_seeded<unsigned>() % max);
+	targetID = std::clamp(targetID, 0ul, net_size - 1);
 	Neuron &neuron = network->get(targetID);
 	if (type == NeuronType::OUTPUT || neuron.type == NeuronType::INPUT)
 	{
